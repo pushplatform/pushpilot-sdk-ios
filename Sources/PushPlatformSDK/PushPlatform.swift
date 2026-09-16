@@ -185,7 +185,8 @@ public protocol PushPlatformDelegate: AnyObject {
     /// - Parameters:
     ///   - notification: Notification data
     ///   - action: Action identifier (nil for default tap)
-    func didOpenNotification(_ notification: Notification, action: String?)
+    ///   - context: Notification context
+    func didOpenNotification(_ notification: Notification, action: String?, context: NotificationContext)
 
     /// Called when VoIP push is received
     /// - Parameters:
@@ -201,47 +202,7 @@ public protocol PushPlatformDelegate: AnyObject {
     func didUpdateVoIPToken()
 }
 
-// MARK: - Models
+// MARK: - Models (Public Aliases)
 
-/// Push notification data
-public struct Notification {
-    public let title: String?
-    public let body: String?
-    public let badge: Int?
-    public let sound: String?
-    public let customData: [String: Any]
-    public let eventID: String?
-    public let callID: String?
-    public let receivedAt: Date
-
-    public init(
-        title: String? = nil,
-        body: String? = nil,
-        badge: Int? = nil,
-        sound: String? = nil,
-        customData: [String: Any] = [:],
-        eventID: String? = nil,
-        callID: String? = nil,
-        receivedAt: Date = Date()
-    ) {
-        self.title = title
-        self.body = body
-        self.badge = badge
-        self.sound = sound
-        self.customData = customData
-        self.eventID = eventID
-        self.callID = callID
-        self.receivedAt = receivedAt
-    }
-}
-
-/// Notification context
-public struct NotificationContext {
-    public let isForeground: Bool
-    public let timestamp: Date
-
-    public init(isForeground: Bool, timestamp: Date = Date()) {
-        self.isForeground = isForeground
-        self.timestamp = timestamp
-    }
-}
+/// Push notification data (public alias for ParsedNotification)
+public typealias Notification = ParsedNotification
