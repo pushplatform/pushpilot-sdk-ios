@@ -5,11 +5,14 @@ final class TokenRegistryTests: XCTestCase {
     var tokenRegistry: TokenRegistry!
     var mockAPIClient: MockAPIClient!
     var mockDelegate: MockTokenRegistryDelegate!
+    var mockInstallationManager: MockInstallationManager!
 
     override func setUp() {
         super.setUp()
         mockAPIClient = MockAPIClient()
-        tokenRegistry = TokenRegistry(apiClient: mockAPIClient)
+        mockInstallationManager = MockInstallationManager()
+        mockInstallationManager.installationID = UUID()
+        tokenRegistry = TokenRegistry(apiClient: mockAPIClient, installationManager: mockInstallationManager)
         mockDelegate = MockTokenRegistryDelegate()
         tokenRegistry.delegate = mockDelegate
 
@@ -20,17 +23,14 @@ final class TokenRegistryTests: XCTestCase {
             environment: .development,
             debugMode: false
         )
-
-        // Initialize installation ID
-        _ = try? InstallationManager.shared.initialize()
     }
 
     override func tearDown() {
-        _ = InstallationManager.shared.resetInstallationID()
         Configuration.shared.reset()
         tokenRegistry = nil
         mockAPIClient = nil
         mockDelegate = nil
+        mockInstallationManager = nil
         super.tearDown()
     }
 
@@ -206,7 +206,7 @@ final class TokenRegistryTests: XCTestCase {
 
     func testRegisterToken_WithoutInstallationID() {
         // Given
-        _ = InstallationManager.shared.resetInstallationID()
+        mockInstallationManager.installationID = nil
         let token = Data([0xa1, 0xb2, 0xc3, 0xd4])
 
         let expectation = self.expectation(description: "Fails without installation ID")
@@ -233,6 +233,11 @@ class MockAPIClient: APIClient {
     var shouldSucceed = true
     var error: SDKError?
     var createSubscriptionCalled = false
+    var updateCallCount = 0
+    var updateResult: Result<Void, SDKError> = .success(())
+    var onUpdateCall: (() -> Void)?
+    var lastUpdateInstallationID: UUID?
+    var lastUpdateExternalUserID: String?
 
     override func createSubscription(installationID: UUID, subscription: Subscription, completion: @escaping (Result<Void, SDKError>) -> Void) {
         createSubscriptionCalled = true
@@ -242,6 +247,22 @@ class MockAPIClient: APIClient {
         } else {
             completion(.failure(error ?? .networkError(underlying: NSError(domain: "Test", code: -1))))
         }
+    }
+
+    func updateUser(installationID: UUID, userID: String?, tags: [String]?, completion: @escaping (Result<Void, SDKError>) -> Void) {
+        updateCallCount += 1
+        lastUpdateInstallationID = installationID
+        lastUpdateExternalUserID = userID
+        onUpdateCall?()
+        completion(updateResult)
+    }
+
+    override func updateInstallation(installationID: UUID, externalUserID: String?, completion: @escaping (Result<Void, SDKError>) -> Void) {
+        updateCallCount += 1
+        lastUpdateInstallationID = installationID
+        lastUpdateExternalUserID = externalUserID
+        onUpdateCall?()
+        completion(updateResult)
     }
 }
 

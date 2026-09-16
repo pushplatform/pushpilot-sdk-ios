@@ -6,10 +6,13 @@ final class PushKitManagerTests: XCTestCase {
     var pushKitManager: PushKitManager!
     var mockTokenRegistry: MockTokenRegistry!
     var mockDelegate: MockPushKitManagerDelegate!
+    var mockInstallationManager: MockInstallationManager!
 
     override func setUp() {
         super.setUp()
-        mockTokenRegistry = MockTokenRegistry()
+        mockInstallationManager = MockInstallationManager()
+        mockInstallationManager.installationID = UUID()
+        mockTokenRegistry = MockTokenRegistry(installationManager: mockInstallationManager)
         pushKitManager = PushKitManager(tokenRegistry: mockTokenRegistry)
         mockDelegate = MockPushKitManagerDelegate()
         pushKitManager.delegate = mockDelegate
@@ -242,6 +245,7 @@ final class PushKitManagerTests: XCTestCase {
 class MockPushKitManagerDelegate: PushKitManagerDelegate {
     var onRegisterVoIPToken: (() -> Void)?
     var onFailToRegisterVoIPToken: ((SDKError) -> Void)?
+    var onReceiveIncomingCall: ((String, String, [String: Any]) -> Void)?
     var onReceiveVoIPPush: (([AnyHashable: Any], @escaping () -> Void) -> Void)?
     var onInvalidateVoIPToken: (() -> Void)?
 
@@ -253,8 +257,8 @@ class MockPushKitManagerDelegate: PushKitManagerDelegate {
         onFailToRegisterVoIPToken?(error)
     }
 
-    func didReceiveVoIPPush(payload: [AnyHashable: Any], completion: @escaping () -> Void) {
-        onReceiveVoIPPush?(payload, completion)
+    func didReceiveIncomingCall(callID: String, callerName: String, metadata: [String: Any]) {
+        onReceiveIncomingCall?(callID, callerName, metadata)
     }
 
     func didInvalidateVoIPToken() {

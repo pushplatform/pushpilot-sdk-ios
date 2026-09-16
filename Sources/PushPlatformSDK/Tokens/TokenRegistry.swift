@@ -3,6 +3,7 @@ import Foundation
 /// Token registry with exponential backoff retry and network recovery
 class TokenRegistry {
     private let apiClient: APIClient
+    private let installationManager: InstallationManagerProtocol
     private let reachability = Reachability()
 
     private var retryAttempt = 0
@@ -11,8 +12,9 @@ class TokenRegistry {
 
     weak var delegate: TokenRegistryDelegate?
 
-    init(apiClient: APIClient = APIClient()) {
+    init(apiClient: APIClient = APIClient(), installationManager: InstallationManagerProtocol = InstallationManager.shared) {
         self.apiClient = apiClient
+        self.installationManager = installationManager
 
         // Start network monitoring for auto-retry on connection restore
         reachability.startMonitoring { [weak self] in
@@ -32,7 +34,7 @@ class TokenRegistry {
     ///   - provider: Provider type ("apns" or "apns_voip")
     ///   - environment: Environment ("development" or "production")
     func registerToken(_ token: Data, provider: String, environment: String) {
-        guard let installationID = InstallationManager.shared.getInstallationID() else {
+        guard let installationID = installationManager.getInstallationID() else {
             Logger.error("Cannot register token: Installation ID not initialized")
             delegate?.didFailToRegisterToken(provider: provider, error: .notConfigured)
             return

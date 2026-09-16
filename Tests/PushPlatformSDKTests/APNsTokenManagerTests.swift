@@ -5,10 +5,13 @@ final class APNsTokenManagerTests: XCTestCase {
     var tokenManager: APNsTokenManager!
     var mockTokenRegistry: MockTokenRegistry!
     var mockDelegate: MockAPNsTokenManagerDelegate!
+    var mockInstallationManager: MockInstallationManager!
 
     override func setUp() {
         super.setUp()
-        mockTokenRegistry = MockTokenRegistry()
+        mockInstallationManager = MockInstallationManager()
+        mockInstallationManager.installationID = UUID()
+        mockTokenRegistry = MockTokenRegistry(installationManager: mockInstallationManager)
         tokenManager = APNsTokenManager(tokenRegistry: mockTokenRegistry)
         mockDelegate = MockAPNsTokenManagerDelegate()
         tokenManager.delegate = mockDelegate
@@ -204,10 +207,9 @@ class MockTokenRegistry: TokenRegistry {
     var lastToken: Data?
     var lastProvider: String?
     var lastEnvironment: String?
-    weak var delegate: TokenRegistryDelegate?
 
-    override init(apiClient: APIClient = APIClient()) {
-        super.init(apiClient: apiClient)
+    override init(apiClient: APIClient = APIClient(), installationManager: InstallationManagerProtocol) {
+        super.init(apiClient: apiClient, installationManager: installationManager)
     }
 
     override func registerToken(_ token: Data, provider: String, environment: String) {

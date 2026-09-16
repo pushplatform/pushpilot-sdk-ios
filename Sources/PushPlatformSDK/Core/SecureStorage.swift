@@ -2,9 +2,13 @@ import Foundation
 import Security
 
 /// Keychain wrapper for secure storage
-class SecureStorage {
-    private let service = "com.pushplatform.sdk"
+class SecureStorage: SecureStorageProtocol {
+    private let service: String
     private let installationIDKey = "installation_id"
+
+    init(service: String = "com.pushplatform.sdk") {
+        self.service = service
+    }
 
     // MARK: - Installation ID
 
@@ -41,7 +45,16 @@ class SecureStorage {
     ///   - data: Data to save
     /// - Returns: true if successful, false otherwise
     private func save(key: String, data: Data) -> Bool {
-        let query: [String: Any] = [
+        // First, try to delete existing item
+        let deleteQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: key
+        ]
+        SecItemDelete(deleteQuery as CFDictionary)
+
+        // Add new item
+        let addQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: key,
@@ -49,11 +62,12 @@ class SecureStorage {
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
         ]
 
-        // Delete existing item first
-        SecItemDelete(query as CFDictionary)
+        let status = SecItemAdd(addQuery as CFDictionary, nil)
 
-        // Add new item
-        let status = SecItemAdd(query as CFDictionary, nil)
+        if status != errSecSuccess {
+            Logger.debug("Keychain save failed with status: \(status)")
+        }
+
         return status == errSecSuccess
     }
 

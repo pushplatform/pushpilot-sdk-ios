@@ -3,12 +3,12 @@ import XCTest
 
 final class InstallationManagerTests: XCTestCase {
     var installationManager: InstallationManager!
-    var secureStorage: SecureStorage!
+    var secureStorage: SecureStorageProtocol!
 
     override func setUp() {
         super.setUp()
-        installationManager = InstallationManager.shared
-        secureStorage = SecureStorage()
+        secureStorage = InMemoryStorage()
+        installationManager = InstallationManager.makeForTesting(secureStorage: secureStorage)
         // Clean up before each test
         _ = installationManager.resetInstallationID()
     }

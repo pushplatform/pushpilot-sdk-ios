@@ -3,11 +3,11 @@ import Foundation
 /// Manages user login/logout and external user ID association
 class UserManager {
     private let apiClient: APIClient
-    private let installationManager: InstallationManager
+    private let installationManager: InstallationManagerProtocol
     private var retryAttempt = 0
     private let maxRetries = 5
 
-    init(apiClient: APIClient, installationManager: InstallationManager = .shared) {
+    init(apiClient: APIClient, installationManager: InstallationManagerProtocol = InstallationManager.shared) {
         self.apiClient = apiClient
         self.installationManager = installationManager
     }

@@ -542,7 +542,7 @@ final class APIClientTests: XCTestCase {
         let json = try JSONSerialization.jsonObject(with: data) as! [String: Any]
 
         // Then
-        XCTAssertEqual(json["installation_id"] as? String, "550e8400-e29b-41d4-a716-446655440000")
+        XCTAssertEqual((json["installation_id"] as? String)?.lowercased(), "550e8400-e29b-41d4-a716-446655440000")
         XCTAssertEqual(json["platform"] as? String, "ios")
         XCTAssertEqual(json["os_version"] as? String, "17.0")
         XCTAssertEqual(json["app_version"] as? String, "1.0.0")

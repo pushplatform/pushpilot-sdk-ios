@@ -276,10 +276,25 @@ final class UserManagerTests: XCTestCase {
 
 // MARK: - Mock Classes
 
-class MockInstallationManager: InstallationManager {
+class MockInstallationManager: InstallationManagerProtocol {
     var installationID: UUID?
+    var shouldThrowOnInitialize = false
 
-    override func getInstallationID() -> UUID? {
+    func initialize() throws -> UUID {
+        if shouldThrowOnInitialize {
+            throw SDKError.keychainAccessDenied
+        }
+        let id = installationID ?? UUID()
+        installationID = id
+        return id
+    }
+
+    func getInstallationID() -> UUID? {
         return installationID
+    }
+
+    func resetInstallationID() -> Bool {
+        installationID = nil
+        return true
     }
 }
