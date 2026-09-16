@@ -10,8 +10,12 @@ public class PushPlatform {
     private let tokenRegistry = TokenRegistry()
     private var apnsTokenManager: APNsTokenManager?
     private var pushKitManager: PushKitManager?
+    private var userManager: UserManager?
 
     private init() {
+        // Initialize API client
+        let apiClient = APIClient()
+
         // Initialize APNs token manager
         apnsTokenManager = APNsTokenManager(tokenRegistry: tokenRegistry)
         apnsTokenManager?.delegate = self
@@ -19,6 +23,9 @@ public class PushPlatform {
         // Initialize PushKit manager
         pushKitManager = PushKitManager(tokenRegistry: tokenRegistry)
         pushKitManager?.delegate = self
+
+        // Initialize user manager
+        userManager = UserManager(apiClient: apiClient)
     }
 
     // MARK: - Configuration
@@ -80,8 +87,7 @@ public class PushPlatform {
         }
 
         Logger.info("User login requested: userID=\(userID)")
-        // TODO: Implement in TASK-006A-03 (API Client)
-        completion(.failure(.notConfigured))
+        userManager?.login(userID: userID, completion: completion)
     }
 
     /// Dissociate user from installation (installation remains active)
@@ -96,8 +102,7 @@ public class PushPlatform {
         }
 
         Logger.info("User logout requested")
-        // TODO: Implement in TASK-006A-03 (API Client)
-        completion(.failure(.notConfigured))
+        userManager?.logout(completion: completion)
     }
 
     // MARK: - Token Registration
