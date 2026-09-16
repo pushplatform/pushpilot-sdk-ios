@@ -1,8 +1,10 @@
 import Foundation
 import CallKit
 import PushKit
+import AVFoundation
 
 /// CallKit integration for incoming VoIP calls
+@available(iOS 10.0, *)
 class CallKitIntegration: NSObject {
     private let provider: CXProvider
     private let callController: CXCallController
@@ -12,13 +14,25 @@ class CallKitIntegration: NSObject {
 
     override init() {
         // Configure CallKit provider
-        let configuration = CXProviderConfiguration()
-        configuration.supportsVideo = false
-        configuration.maximumCallGroups = 1
-        configuration.maximumCallsPerCallGroup = 1
-        configuration.supportedHandleTypes = [.generic]
+        if #available(iOS 14.0, *) {
+            let configuration = CXProviderConfiguration()
+            configuration.supportsVideo = false
+            configuration.maximumCallGroups = 1
+            configuration.maximumCallsPerCallGroup = 1
+            configuration.supportedHandleTypes = [.generic]
 
-        self.provider = CXProvider(configuration: configuration)
+            self.provider = CXProvider(configuration: configuration)
+        } else {
+            // iOS 13: Use legacy initializer with localizedName
+            let configuration = CXProviderConfiguration(localizedName: "PushPlatform")
+            configuration.supportsVideo = false
+            configuration.maximumCallGroups = 1
+            configuration.maximumCallsPerCallGroup = 1
+            configuration.supportedHandleTypes = [.generic]
+
+            self.provider = CXProvider(configuration: configuration)
+        }
+
         self.callController = CXCallController()
         self.deduplicationCache = DeduplicationCache()
 

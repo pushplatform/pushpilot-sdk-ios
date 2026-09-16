@@ -58,7 +58,7 @@ struct NotificationParser {
 }
 
 /// Parsed notification model
-struct ParsedNotification {
+public struct ParsedNotification {
     /// Notification title (from aps.alert.title)
     let title: String?
 

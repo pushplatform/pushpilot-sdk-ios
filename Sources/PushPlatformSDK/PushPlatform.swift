@@ -1,4 +1,5 @@
 import Foundation
+import UserNotifications
 
 /// Main SDK façade - singleton instance for push platform integration
 public class PushPlatform {
