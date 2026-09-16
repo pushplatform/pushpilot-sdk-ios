@@ -8,9 +8,11 @@ public class PushPlatform {
     private let configuration = Configuration.shared
     private let installationManager = InstallationManager.shared
     private let tokenRegistry = TokenRegistry()
+    private let deduplicationCache = DeduplicationCache()
     private var apnsTokenManager: APNsTokenManager?
     private var pushKitManager: PushKitManager?
     private var userManager: UserManager?
+    private var notificationDelegate: NotificationDelegate?
 
     private init() {
         // Initialize API client
@@ -26,6 +28,12 @@ public class PushPlatform {
 
         // Initialize user manager
         userManager = UserManager(apiClient: apiClient)
+
+        // Initialize notification delegate
+        if #available(iOS 10.0, *) {
+            notificationDelegate = NotificationDelegate(deduplicationCache: deduplicationCache)
+            notificationDelegate?.appDelegate = nil  // Set via delegate property
+        }
     }
 
     // MARK: - Configuration
@@ -126,10 +134,50 @@ public class PushPlatform {
         apnsTokenManager?.didFailToRegisterAPNs(error)
     }
 
+    // MARK: - Notification Handling
+
+    /// Handle foreground notification (call from willPresent)
+    /// - Parameters:
+    ///   - notification: UNNotification from system
+    ///   - completionHandler: Presentation options callback
+    @available(iOS 10.0, *)
+    public func handleForegroundNotification(
+        _ notification: UNNotification,
+        completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        notificationDelegate?.userNotificationCenter(
+            UNUserNotificationCenter.current(),
+            willPresent: notification,
+            withCompletionHandler: completionHandler
+        )
+    }
+
+    /// Handle notification response (call from didReceive)
+    /// - Parameters:
+    ///   - response: UNNotificationResponse from system
+    ///   - completionHandler: Completion callback
+    @available(iOS 10.0, *)
+    public func handleNotificationResponse(
+        _ response: UNNotificationResponse,
+        completionHandler: @escaping () -> Void
+    ) {
+        notificationDelegate?.userNotificationCenter(
+            UNUserNotificationCenter.current(),
+            didReceive: response,
+            withCompletionHandler: completionHandler
+        )
+    }
+
     // MARK: - Delegate
 
     /// Set delegate for SDK callbacks
-    public weak var delegate: PushPlatformDelegate?
+    public weak var delegate: PushPlatformDelegate? {
+        didSet {
+            if #available(iOS 10.0, *) {
+                notificationDelegate?.appDelegate = delegate
+            }
+        }
+    }
 }
 
 // MARK: - APNsTokenManagerDelegate
