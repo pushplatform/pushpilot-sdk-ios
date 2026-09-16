@@ -9,11 +9,16 @@ public class PushPlatform {
     private let installationManager = InstallationManager.shared
     private let tokenRegistry = TokenRegistry()
     private var apnsTokenManager: APNsTokenManager?
+    private var pushKitManager: PushKitManager?
 
     private init() {
         // Initialize APNs token manager
         apnsTokenManager = APNsTokenManager(tokenRegistry: tokenRegistry)
         apnsTokenManager?.delegate = self
+
+        // Initialize PushKit manager
+        pushKitManager = PushKitManager(tokenRegistry: tokenRegistry)
+        pushKitManager?.delegate = self
     }
 
     // MARK: - Configuration
@@ -131,6 +136,28 @@ extension PushPlatform: APNsTokenManagerDelegate {
 
     func didFailToRegisterAPNsToken(error: Error) {
         delegate?.didFailRegisterTokens(error: error as? SDKError ?? .networkError(underlying: error))
+    }
+}
+
+// MARK: - PushKitManagerDelegate
+
+extension PushPlatform: PushKitManagerDelegate {
+    func didRegisterVoIPToken() {
+        delegate?.didUpdateVoIPToken()
+    }
+
+    func didFailToRegisterVoIPToken(error: SDKError) {
+        delegate?.didFailRegisterTokens(error: error)
+    }
+
+    func didReceiveVoIPPush(payload: [AnyHashable: Any], completion: @escaping () -> Void) {
+        // TODO: Implement in TASK-006A-06 (CallKit Integration)
+        Logger.debug("VoIP push received, deferring to CallKit handler")
+        completion()
+    }
+
+    func didInvalidateVoIPToken() {
+        Logger.warning("VoIP token invalidated")
     }
 }
 
