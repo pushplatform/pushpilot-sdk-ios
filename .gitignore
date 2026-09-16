@@ -1,0 +1,15 @@
+# Swift Package Manager
+.build/
+.swiftpm/
+*.xcodeproj
+
+# Xcode
+xcuserdata/
+*.xcworkspace
+*.xcscmblueprint
+
+# macOS
+.DS_Store
+
+# SPM Package Pins
+Package.resolved
