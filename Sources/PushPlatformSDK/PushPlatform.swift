@@ -7,8 +7,14 @@ public class PushPlatform {
 
     private let configuration = Configuration.shared
     private let installationManager = InstallationManager.shared
+    private let tokenRegistry = TokenRegistry()
+    private var apnsTokenManager: APNsTokenManager?
 
-    private init() {}
+    private init() {
+        // Initialize APNs token manager
+        apnsTokenManager = APNsTokenManager(tokenRegistry: tokenRegistry)
+        apnsTokenManager?.delegate = self
+    }
 
     // MARK: - Configuration
 
@@ -100,20 +106,32 @@ public class PushPlatform {
         }
 
         Logger.info("APNs token received: \(Logger.tokenMasked(token))")
-        // TODO: Implement in TASK-006A-04 (APNs Token Manager)
+        apnsTokenManager?.didReceiveAPNsToken(token)
     }
 
     /// Handle APNs registration failure
     /// - Parameter error: Registration error
     public func didFailToRegisterAPNs(_ error: Error) {
         Logger.error("APNs registration failed: \(error.localizedDescription)")
-        delegate?.didFailRegisterTokens(error: .networkError(underlying: error))
+        apnsTokenManager?.didFailToRegisterAPNs(error)
     }
 
     // MARK: - Delegate
 
     /// Set delegate for SDK callbacks
     public weak var delegate: PushPlatformDelegate?
+}
+
+// MARK: - APNsTokenManagerDelegate
+
+extension PushPlatform: APNsTokenManagerDelegate {
+    func didRegisterAPNsToken() {
+        delegate?.didUpdateAPNsToken()
+    }
+
+    func didFailToRegisterAPNsToken(error: Error) {
+        delegate?.didFailRegisterTokens(error: error as? SDKError ?? .networkError(underlying: error))
+    }
 }
 
 // MARK: - Delegate Protocol
