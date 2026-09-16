@@ -150,10 +150,9 @@ extension PushPlatform: PushKitManagerDelegate {
         delegate?.didFailRegisterTokens(error: error)
     }
 
-    func didReceiveVoIPPush(payload: [AnyHashable: Any], completion: @escaping () -> Void) {
-        // TODO: Implement in TASK-006A-06 (CallKit Integration)
-        Logger.debug("VoIP push received, deferring to CallKit handler")
-        completion()
+    func didReceiveIncomingCall(callID: String, callerName: String, metadata: [String: Any]) {
+        Logger.info("Incoming call: \(callerName), call_id: \(callID)")
+        delegate?.didReceiveIncomingCall(callID: callID, callerName: callerName, metadata: metadata)
     }
 
     func didInvalidateVoIPToken() {

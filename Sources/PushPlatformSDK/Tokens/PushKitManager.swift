@@ -5,13 +5,15 @@ import PushKit
 class PushKitManager: NSObject {
     private let tokenRegistry: TokenRegistry
     private let pushRegistry: PKPushRegistry
+    private let callKitIntegration: CallKitIntegration
     private var currentVoIPToken: Data?
 
     weak var delegate: PushKitManagerDelegate?
 
-    init(tokenRegistry: TokenRegistry) {
+    init(tokenRegistry: TokenRegistry, callKitIntegration: CallKitIntegration = CallKitIntegration()) {
         self.tokenRegistry = tokenRegistry
         self.pushRegistry = PKPushRegistry(queue: .main)
+        self.callKitIntegration = callKitIntegration
         super.init()
 
         // Set delegate and register for VoIP push
@@ -19,6 +21,7 @@ class PushKitManager: NSObject {
         pushRegistry.desiredPushTypes = [.voIP]
 
         self.tokenRegistry.delegate = self
+        self.callKitIntegration.delegate = self
     }
 
     /// Handle VoIP token registration
@@ -58,11 +61,10 @@ extension PushKitManager: PKPushRegistryDelegate {
             return
         }
 
-        Logger.info("VoIP push received")
+        Logger.info("VoIP push received, delegating to CallKit")
 
-        // Parse payload and delegate to CallKit handler
-        // TODO: Implement in TASK-006A-06 (CallKit Integration)
-        delegate?.didReceiveVoIPPush(payload: payload.dictionaryPayload, completion: completion)
+        // Handle via CallKit integration
+        callKitIntegration.handleIncomingVoIPPush(payload: payload.dictionaryPayload, completion: completion)
     }
 
     func pushRegistry(_ registry: PKPushRegistry, didInvalidatePushTokenFor type: PKPushType) {
@@ -88,12 +90,21 @@ extension PushKitManager: TokenRegistryDelegate {
     }
 }
 
+// MARK: - CallKitIntegrationDelegate
+
+extension PushKitManager: CallKitIntegrationDelegate {
+    func didReceiveIncomingCall(callID: String, callerName: String, metadata: [String: Any]) {
+        // Forward to app delegate
+        delegate?.didReceiveIncomingCall(callID: callID, callerName: callerName, metadata: metadata)
+    }
+}
+
 // MARK: - Delegate Protocol
 
 protocol PushKitManagerDelegate: AnyObject {
     func didRegisterVoIPToken()
     func didFailToRegisterVoIPToken(error: SDKError)
-    func didReceiveVoIPPush(payload: [AnyHashable: Any], completion: @escaping () -> Void)
+    func didReceiveIncomingCall(callID: String, callerName: String, metadata: [String: Any])
     func didInvalidateVoIPToken()
 }
 
