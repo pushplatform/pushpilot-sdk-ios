@@ -19,7 +19,10 @@ let package = Package(
         .target(
             name: "PushPlatformSDK",
             dependencies: [],
-            path: "Sources/PushPlatformSDK"
+            path: "Sources/PushPlatformSDK",
+            swiftSettings: [
+                .unsafeFlags(["-enable-library-evolution"])
+            ]
         ),
         .testTarget(
             name: "PushPlatformSDKTests",
