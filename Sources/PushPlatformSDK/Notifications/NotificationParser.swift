@@ -60,25 +60,25 @@ struct NotificationParser {
 /// Parsed notification model
 public struct ParsedNotification {
     /// Notification title (from aps.alert.title)
-    let title: String?
+    public let title: String?
 
     /// Notification body (from aps.alert.body or aps.alert string)
-    let body: String?
+    public let body: String?
 
     /// Badge number (from aps.badge)
-    let badge: Int?
+    public let badge: Int?
 
     /// Sound name (from aps.sound)
-    let sound: String?
+    public let sound: String?
 
     /// Event ID for deduplication (custom field)
-    let eventID: String?
+    public let eventID: String?
 
     /// Call ID for VoIP calls (custom field)
-    let callID: String?
+    public let callID: String?
 
     /// All custom data fields (excluding aps)
-    let customData: [String: Any]
+    public let customData: [String: Any]
 }
 
 // MARK: - Notification Context
