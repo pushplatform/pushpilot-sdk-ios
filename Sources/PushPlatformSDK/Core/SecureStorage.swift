@@ -1,10 +1,12 @@
 import Foundation
 import Security
+import os
 
 /// Keychain wrapper for secure storage
 class SecureStorage: SecureStorageProtocol {
     private let service: String
     private let installationIDKey = "installation_id"
+    private static let statusLog = OSLog(subsystem: "com.pushplatform.sdk", category: "keychain")
 
     init(service: String = "com.pushplatform.sdk") {
         self.service = service
@@ -45,30 +47,45 @@ class SecureStorage: SecureStorageProtocol {
     ///   - data: Data to save
     /// - Returns: true if successful, false otherwise
     private func save(key: String, data: Data) -> Bool {
-        // First, try to delete existing item
-        let deleteQuery: [String: Any] = [
+        let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: key
         ]
-        SecItemDelete(deleteQuery as CFDictionary)
-
-        // Add new item
-        let addQuery: [String: Any] = [
+        let addAttributes: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: key,
             kSecValueData as String: data,
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
         ]
+        let updateAttributes: [String: Any] = [
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        ]
 
-        let status = SecItemAdd(addQuery as CFDictionary, nil)
+        let copyStatus = SecItemCopyMatching(query as CFDictionary, nil)
+        logStatus("SecItemCopyMatching", copyStatus)
 
-        if status != errSecSuccess {
-            Logger.debug("Keychain save failed with status: \(status)")
+        switch copyStatus {
+        case errSecSuccess:
+            let updateStatus = SecItemUpdate(query as CFDictionary, updateAttributes as CFDictionary)
+            logStatus("SecItemUpdate", updateStatus)
+            return updateStatus == errSecSuccess
+
+        case errSecItemNotFound:
+            let addStatus = SecItemAdd(addAttributes as CFDictionary, nil)
+            logStatus("SecItemAdd", addStatus)
+            if addStatus == errSecDuplicateItem {
+                let updateStatus = SecItemUpdate(query as CFDictionary, updateAttributes as CFDictionary)
+                logStatus("SecItemUpdate after duplicate", updateStatus)
+                return updateStatus == errSecSuccess
+            }
+            return addStatus == errSecSuccess
+
+        default:
+            return false
         }
-
-        return status == errSecSuccess
     }
 
     /// Read data from Keychain
@@ -85,6 +102,7 @@ class SecureStorage: SecureStorageProtocol {
 
         var result: AnyObject?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
+        logStatus("SecItemCopyMatching", status)
 
         guard status == errSecSuccess,
               let data = result as? Data else {
@@ -105,6 +123,12 @@ class SecureStorage: SecureStorageProtocol {
         ]
 
         let status = SecItemDelete(query as CFDictionary)
+        logStatus("SecItemDelete", status)
         return status == errSecSuccess || status == errSecItemNotFound
+    }
+
+    private func logStatus(_ operation: String, _ status: OSStatus) {
+        Logger.debug("Keychain \(operation) status: \(status)")
+        os_log("%{public}@ status: %{public}d", log: Self.statusLog, type: .debug, operation, status)
     }
 }
