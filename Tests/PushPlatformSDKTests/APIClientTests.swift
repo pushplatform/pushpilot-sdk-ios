@@ -60,13 +60,13 @@ final class APIClientTests: XCTestCase {
 
     func testCreateInstallation_Success() {
         // Given
-        let installation = Installation(
-            installationID: UUID(),
+        let installation = InstallationRegistration(
+            applicationID: UUID(),
+            deviceID: UUID().uuidString,
+            environment: "development",
             osVersion: "17.0",
             appVersion: "1.0.0",
-            sdkVersion: "1.0.0",
-            locale: "en_US",
-            timezone: "America/New_York"
+            deviceModel: "iPhone"
         )
 
         mockSession.mockResponse = HTTPURLResponse(
@@ -75,16 +75,16 @@ final class APIClientTests: XCTestCase {
             httpVersion: nil,
             headerFields: nil
         )
-        mockSession.mockData = Data()
+        mockSession.mockData = Data("{\"id\":\"11111111-1111-4111-8111-111111111111\"}".utf8)
 
         let expectation = self.expectation(description: "Installation created")
 
         // When
-        apiClient.createInstallation(installation) { result in
+        apiClient.registerInstallation(installation) { result in
             // Then
             switch result {
-            case .success:
-                XCTAssertTrue(true, "Installation should be created")
+            case .success(let id):
+                XCTAssertEqual(id.uuidString.lowercased(), "11111111-1111-4111-8111-111111111111")
             case .failure(let error):
                 XCTFail("Should not fail: \(error)")
             }
@@ -100,22 +100,44 @@ final class APIClientTests: XCTestCase {
         XCTAssertEqual(mockSession.lastRequest?.value(forHTTPHeaderField: "Content-Type"), "application/json")
     }
 
+    func testRegistrationContractAndMissingServerID() throws {
+        let appID = UUID()
+        let deviceID = UUID().uuidString
+        let request = InstallationRegistration(applicationID: appID, deviceID: deviceID,
+            environment: "development", osVersion: "26.1", appVersion: "1.0", deviceModel: "iPhone")
+        mockSession.mockResponse = HTTPURLResponse(url: URL(string: "https://api.test.example/v1/installations")!,
+            statusCode: 201, httpVersion: nil, headerFields: nil)
+        mockSession.mockData = Data("{}".utf8)
+        var rejected = false
+        apiClient.registerInstallation(request) { result in
+            if case .failure = result { rejected = true }
+        }
+        XCTAssertTrue(rejected, "A 201 without a server ID must not complete initialization")
+        let body = try XCTUnwrap(mockSession.lastRequest?.httpBody)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+        XCTAssertEqual(json["application_id"] as? String, appID.uuidString)
+        XCTAssertEqual(json["device_id"] as? String, deviceID)
+        XCTAssertEqual(json["platform"] as? String, "ios")
+        XCTAssertEqual(json["environment"] as? String, "development")
+        XCTAssertNil(json["installation_id"])
+    }
+
     func testCreateInstallation_NotConfigured() {
         // Given
         configuration.reset()
-        let installation = Installation(
-            installationID: UUID(),
+        let installation = InstallationRegistration(
+            applicationID: UUID(),
+            deviceID: UUID().uuidString,
+            environment: "development",
             osVersion: "17.0",
             appVersion: "1.0.0",
-            sdkVersion: "1.0.0",
-            locale: "en_US",
-            timezone: "America/New_York"
+            deviceModel: "iPhone"
         )
 
         let expectation = self.expectation(description: "Not configured error")
 
         // When
-        apiClient.createInstallation(installation) { result in
+        apiClient.registerInstallation(installation) { result in
             // Then
             switch result {
             case .success:
@@ -135,13 +157,13 @@ final class APIClientTests: XCTestCase {
 
     func testCreateInstallation_NetworkError() {
         // Given
-        let installation = Installation(
-            installationID: UUID(),
+        let installation = InstallationRegistration(
+            applicationID: UUID(),
+            deviceID: UUID().uuidString,
+            environment: "development",
             osVersion: "17.0",
             appVersion: "1.0.0",
-            sdkVersion: "1.0.0",
-            locale: "en_US",
-            timezone: "America/New_York"
+            deviceModel: "iPhone"
         )
 
         mockSession.mockError = NSError(domain: NSURLErrorDomain, code: NSURLErrorNotConnectedToInternet)
@@ -149,7 +171,7 @@ final class APIClientTests: XCTestCase {
         let expectation = self.expectation(description: "Network error")
 
         // When
-        apiClient.createInstallation(installation) { result in
+        apiClient.registerInstallation(installation) { result in
             // Then
             switch result {
             case .success:
@@ -169,13 +191,13 @@ final class APIClientTests: XCTestCase {
 
     func testCreateInstallation_400Error() {
         // Given
-        let installation = Installation(
-            installationID: UUID(),
+        let installation = InstallationRegistration(
+            applicationID: UUID(),
+            deviceID: UUID().uuidString,
+            environment: "development",
             osVersion: "17.0",
             appVersion: "1.0.0",
-            sdkVersion: "1.0.0",
-            locale: "en_US",
-            timezone: "America/New_York"
+            deviceModel: "iPhone"
         )
 
         mockSession.mockResponse = HTTPURLResponse(
@@ -191,7 +213,7 @@ final class APIClientTests: XCTestCase {
         let expectation = self.expectation(description: "API error")
 
         // When
-        apiClient.createInstallation(installation) { result in
+        apiClient.registerInstallation(installation) { result in
             // Then
             switch result {
             case .success:
@@ -212,13 +234,13 @@ final class APIClientTests: XCTestCase {
 
     func testCreateInstallation_500Error() {
         // Given
-        let installation = Installation(
-            installationID: UUID(),
+        let installation = InstallationRegistration(
+            applicationID: UUID(),
+            deviceID: UUID().uuidString,
+            environment: "development",
             osVersion: "17.0",
             appVersion: "1.0.0",
-            sdkVersion: "1.0.0",
-            locale: "en_US",
-            timezone: "America/New_York"
+            deviceModel: "iPhone"
         )
 
         mockSession.mockResponse = HTTPURLResponse(
@@ -234,7 +256,7 @@ final class APIClientTests: XCTestCase {
         let expectation = self.expectation(description: "Server error")
 
         // When
-        apiClient.createInstallation(installation) { result in
+        apiClient.registerInstallation(installation) { result in
             // Then
             switch result {
             case .success:
@@ -270,7 +292,7 @@ final class APIClientTests: XCTestCase {
         let expectation = self.expectation(description: "User login")
 
         // When
-        apiClient.updateInstallation(installationID: installationID, externalUserID: "user_123") { result in
+        apiClient.loginUser(installationID: installationID, externalUserID: "user_123") { result in
             // Then
             switch result {
             case .success:
@@ -284,8 +306,8 @@ final class APIClientTests: XCTestCase {
         waitForExpectations(timeout: 1.0)
 
         // Verify request
-        XCTAssertEqual(mockSession.lastRequest?.httpMethod, "PATCH")
-        XCTAssertTrue(mockSession.lastRequest?.url?.path.contains(installationID.uuidString) ?? false)
+        XCTAssertEqual(mockSession.lastRequest?.httpMethod, "POST")
+        XCTAssertEqual(mockSession.lastRequest?.url?.path, "/v1/installations/\(installationID.uuidString)/login")
     }
 
     func testUpdateInstallation_Logout() {
@@ -303,7 +325,7 @@ final class APIClientTests: XCTestCase {
         let expectation = self.expectation(description: "User logout")
 
         // When
-        apiClient.updateInstallation(installationID: installationID, externalUserID: nil) { result in
+        apiClient.logoutUser(installationID: installationID) { result in
             // Then
             switch result {
             case .success:
@@ -429,13 +451,13 @@ final class APIClientTests: XCTestCase {
 
     func testRequestTimeout() {
         // Given
-        let installation = Installation(
-            installationID: UUID(),
+        let installation = InstallationRegistration(
+            applicationID: UUID(),
+            deviceID: UUID().uuidString,
+            environment: "development",
             osVersion: "17.0",
             appVersion: "1.0.0",
-            sdkVersion: "1.0.0",
-            locale: "en_US",
-            timezone: "America/New_York"
+            deviceModel: "iPhone"
         )
 
         mockSession.mockResponse = HTTPURLResponse(
@@ -448,7 +470,7 @@ final class APIClientTests: XCTestCase {
         let expectation = self.expectation(description: "Request timeout")
 
         // When
-        apiClient.createInstallation(installation) { _ in
+        apiClient.registerInstallation(installation) { _ in
             expectation.fulfill()
         }
 
@@ -460,13 +482,13 @@ final class APIClientTests: XCTestCase {
 
     func testAuthorizationHeader() {
         // Given
-        let installation = Installation(
-            installationID: UUID(),
+        let installation = InstallationRegistration(
+            applicationID: UUID(),
+            deviceID: UUID().uuidString,
+            environment: "development",
             osVersion: "17.0",
             appVersion: "1.0.0",
-            sdkVersion: "1.0.0",
-            locale: "en_US",
-            timezone: "America/New_York"
+            deviceModel: "iPhone"
         )
 
         mockSession.mockResponse = HTTPURLResponse(
@@ -479,7 +501,7 @@ final class APIClientTests: XCTestCase {
         let expectation = self.expectation(description: "Authorization header")
 
         // When
-        apiClient.createInstallation(installation) { _ in
+        apiClient.registerInstallation(installation) { _ in
             expectation.fulfill()
         }
 
@@ -493,13 +515,13 @@ final class APIClientTests: XCTestCase {
 
     func testContentTypeHeader() {
         // Given
-        let installation = Installation(
-            installationID: UUID(),
+        let installation = InstallationRegistration(
+            applicationID: UUID(),
+            deviceID: UUID().uuidString,
+            environment: "development",
             osVersion: "17.0",
             appVersion: "1.0.0",
-            sdkVersion: "1.0.0",
-            locale: "en_US",
-            timezone: "America/New_York"
+            deviceModel: "iPhone"
         )
 
         mockSession.mockResponse = HTTPURLResponse(
@@ -512,7 +534,7 @@ final class APIClientTests: XCTestCase {
         let expectation = self.expectation(description: "Content-Type header")
 
         // When
-        apiClient.createInstallation(installation) { _ in
+        apiClient.registerInstallation(installation) { _ in
             expectation.fulfill()
         }
 

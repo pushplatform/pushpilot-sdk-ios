@@ -21,6 +21,23 @@ final class InstallationManagerTests: XCTestCase {
         super.tearDown()
     }
 
+    func testRegistrationUsesServerIDWithoutChangingPersistentDeviceID() throws {
+        let deviceID = try installationManager.initialize()
+        installationManager.beginRegistration()
+        XCTAssertNil(installationManager.getInstallationID())
+        let serverID = UUID()
+        installationManager.completeRegistration(serverID)
+        XCTAssertEqual(installationManager.getInstallationID(), serverID)
+        XCTAssertEqual(secureStorage.getInstallationID(), deviceID)
+        XCTAssertEqual(try installationManager.initialize(), deviceID)
+
+        // A process restart must register the same device, never the server ID.
+        let restarted = InstallationManager.makeForTesting(secureStorage: secureStorage)
+        restarted.beginRegistration()
+        XCTAssertNil(restarted.getInstallationID())
+        XCTAssertEqual(try restarted.initialize(), deviceID)
+    }
+
     // MARK: - Initialization Tests
 
     func testInitialize_GeneratesNewUUID_WhenNotExists() throws {
@@ -144,7 +161,7 @@ final class InstallationManagerTests: XCTestCase {
             queue.async {
                 do {
                     let id = try self.installationManager.initialize()
-                    syncQueue.async {
+                    syncQueue.sync {
                         ids.append(id)
                     }
                 } catch {

@@ -27,7 +27,7 @@ class UserManager {
 
         Logger.info("User login: external_user_id=\(userID)")
         retryAttempt = 0
-        updateUser(installationID: installationID, externalUserID: userID, completion: completion)
+        performLogin(installationID: installationID, externalUserID: userID, completion: completion)
     }
 
     // MARK: - Logout
@@ -43,30 +43,54 @@ class UserManager {
 
         Logger.info("User logout")
         retryAttempt = 0
-        updateUser(installationID: installationID, externalUserID: nil, completion: completion)
+        performLogout(installationID: installationID, completion: completion)
     }
 
     // MARK: - Private
 
-    private func updateUser(
+    private func performLogin(
         installationID: UUID,
-        externalUserID: String?,
+        externalUserID: String,
         completion: @escaping (Result<Void, SDKError>) -> Void
     ) {
-        apiClient.updateInstallation(installationID: installationID, externalUserID: externalUserID) { [weak self] result in
+        apiClient.loginUser(installationID: installationID, externalUserID: externalUserID) { [weak self] result in
             guard let self = self else { return }
 
             switch result {
             case .success:
-                Logger.info("User update successful: external_user_id=\(externalUserID ?? "nil")")
+                Logger.info("Login successful: external_user_id=\(externalUserID)")
                 self.retryAttempt = 0
                 completion(.success(()))
 
             case .failure(let error):
                 if self.shouldRetry(error) {
-                    self.scheduleRetry(installationID: installationID, externalUserID: externalUserID, completion: completion)
+                    self.scheduleLoginRetry(installationID: installationID, externalUserID: externalUserID, completion: completion)
                 } else {
-                    Logger.error("User update failed permanently: \(error)")
+                    Logger.error("Login failed permanently: \(error)")
+                    completion(.failure(error))
+                }
+            }
+        }
+    }
+
+    private func performLogout(
+        installationID: UUID,
+        completion: @escaping (Result<Void, SDKError>) -> Void
+    ) {
+        apiClient.logoutUser(installationID: installationID) { [weak self] result in
+            guard let self = self else { return }
+
+            switch result {
+            case .success:
+                Logger.info("Logout successful")
+                self.retryAttempt = 0
+                completion(.success(()))
+
+            case .failure(let error):
+                if self.shouldRetry(error) {
+                    self.scheduleLogoutRetry(installationID: installationID, completion: completion)
+                } else {
+                    Logger.error("Logout failed permanently: \(error)")
                     completion(.failure(error))
                 }
             }
@@ -85,13 +109,13 @@ class UserManager {
         }
     }
 
-    private func scheduleRetry(
+    private func scheduleLoginRetry(
         installationID: UUID,
-        externalUserID: String?,
+        externalUserID: String,
         completion: @escaping (Result<Void, SDKError>) -> Void
     ) {
         guard retryAttempt < maxRetries else {
-            Logger.error("User update max retries exceeded")
+            Logger.error("Login max retries exceeded")
             completion(.failure(.maxRetriesExceeded))
             return
         }
@@ -99,10 +123,30 @@ class UserManager {
         let delay = min(pow(2.0, Double(retryAttempt)), 60.0)
         retryAttempt += 1
 
-        Logger.debug("Retrying user update in \(delay)s (attempt \(retryAttempt)/\(maxRetries))")
+        Logger.debug("Retrying login in \(delay)s (attempt \(retryAttempt)/\(maxRetries))")
 
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
-            self?.updateUser(installationID: installationID, externalUserID: externalUserID, completion: completion)
+            self?.performLogin(installationID: installationID, externalUserID: externalUserID, completion: completion)
+        }
+    }
+
+    private func scheduleLogoutRetry(
+        installationID: UUID,
+        completion: @escaping (Result<Void, SDKError>) -> Void
+    ) {
+        guard retryAttempt < maxRetries else {
+            Logger.error("Logout max retries exceeded")
+            completion(.failure(.maxRetriesExceeded))
+            return
+        }
+
+        let delay = min(pow(2.0, Double(retryAttempt)), 60.0)
+        retryAttempt += 1
+
+        Logger.debug("Retrying logout in \(delay)s (attempt \(retryAttempt)/\(maxRetries))")
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+            self?.performLogout(installationID: installationID, completion: completion)
         }
     }
 }

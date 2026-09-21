@@ -15,9 +15,9 @@ class APIClient {
     /// - Parameters:
     ///   - installation: Installation data
     ///   - completion: Result callback
-    func createInstallation(
-        _ installation: Installation,
-        completion: @escaping (Result<Void, SDKError>) -> Void
+    func registerInstallation(
+        _ installation: InstallationRegistration,
+        completion: @escaping (Result<UUID, SDKError>) -> Void
     ) {
         guard let apiKey = configuration.apiKey else {
             completion(.failure(.notConfigured))
@@ -38,7 +38,7 @@ class APIClient {
             return
         }
 
-        Logger.debug("POST /v1/installations: \(installation.installationID)")
+        Logger.debug("POST /v1/installations: \(installation.deviceID)")
 
         session.dataTask(with: request) { data, response, error in
             if let error = error {
@@ -56,6 +56,73 @@ class APIClient {
 
             switch httpResponse.statusCode {
             case 200, 201:
+                do {
+                    let registration = try JSONDecoder().decode(InstallationRegistrationResponse.self, from: data ?? Data())
+                    completion(.success(registration.id))
+                } catch {
+                    completion(.failure(.networkError(underlying: error)))
+                }
+            case 400...499:
+                let message = self.parseErrorMessage(from: data) ?? "Client error"
+                completion(.failure(.apiError(statusCode: httpResponse.statusCode, message: message)))
+            case 500...599:
+                let message = self.parseErrorMessage(from: data) ?? "Server error"
+                completion(.failure(.apiError(statusCode: httpResponse.statusCode, message: message)))
+            default:
+                completion(.failure(.apiError(statusCode: httpResponse.statusCode, message: "Unknown error")))
+            }
+        }.resume()
+    }
+
+    /// Login user - associate installation with external user ID
+    /// - Parameters:
+    ///   - installationID: Installation UUID
+    ///   - externalUserID: External user ID
+    ///   - completion: Result callback
+    func loginUser(
+        installationID: UUID,
+        externalUserID: String,
+        completion: @escaping (Result<Void, SDKError>) -> Void
+    ) {
+        guard let apiKey = configuration.apiKey else {
+            completion(.failure(.notConfigured))
+            return
+        }
+
+        let url = URL(string: "\(configuration.apiBaseURL)/v1/installations/\(installationID.uuidString)/login")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 30.0
+
+        let loginRequest = ["external_user_id": externalUserID]
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: loginRequest)
+        } catch {
+            completion(.failure(.networkError(underlying: error)))
+            return
+        }
+
+        Logger.debug("POST /v1/installations/\(installationID)/login: external_user_id=\(externalUserID)")
+
+        session.dataTask(with: request) { data, response, error in
+            if let error = error {
+                Logger.error("Login failed: \(error.localizedDescription)")
+                completion(.failure(.networkError(underlying: error)))
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(.networkError(underlying: NSError(domain: "APIClient", code: -1))))
+                return
+            }
+
+            Logger.debug("Login response: \(httpResponse.statusCode)")
+
+            switch httpResponse.statusCode {
+            case 200, 204:
                 completion(.success(()))
             case 400...499:
                 let message = self.parseErrorMessage(from: data) ?? "Client error"
@@ -69,14 +136,12 @@ class APIClient {
         }.resume()
     }
 
-    /// Update installation with external user ID
+    /// Logout user - dissociate user from installation
     /// - Parameters:
     ///   - installationID: Installation UUID
-    ///   - externalUserID: External user ID (nil to dissociate)
     ///   - completion: Result callback
-    func updateInstallation(
+    func logoutUser(
         installationID: UUID,
-        externalUserID: String?,
         completion: @escaping (Result<Void, SDKError>) -> Void
     ) {
         guard let apiKey = configuration.apiKey else {
@@ -84,27 +149,18 @@ class APIClient {
             return
         }
 
-        let url = URL(string: "\(configuration.apiBaseURL)/v1/installations/\(installationID.uuidString)")!
+        let url = URL(string: "\(configuration.apiBaseURL)/v1/installations/\(installationID.uuidString)/logout")!
         var request = URLRequest(url: url)
-        request.httpMethod = "PATCH"
+        request.httpMethod = "POST"
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = 30.0
 
-        let update = UserUpdate(externalUserID: externalUserID)
-
-        do {
-            request.httpBody = try JSONEncoder().encode(update)
-        } catch {
-            completion(.failure(.networkError(underlying: error)))
-            return
-        }
-
-        Logger.debug("PATCH /v1/installations/\(installationID): external_user_id=\(externalUserID ?? "nil")")
+        Logger.debug("POST /v1/installations/\(installationID)/logout")
 
         session.dataTask(with: request) { data, response, error in
             if let error = error {
-                Logger.error("Installation update failed: \(error.localizedDescription)")
+                Logger.error("Logout failed: \(error.localizedDescription)")
                 completion(.failure(.networkError(underlying: error)))
                 return
             }
@@ -114,10 +170,10 @@ class APIClient {
                 return
             }
 
-            Logger.debug("Installation update response: \(httpResponse.statusCode)")
+            Logger.debug("Logout response: \(httpResponse.statusCode)")
 
             switch httpResponse.statusCode {
-            case 200:
+            case 200, 204:
                 completion(.success(()))
             case 400...499:
                 let message = self.parseErrorMessage(from: data) ?? "Client error"

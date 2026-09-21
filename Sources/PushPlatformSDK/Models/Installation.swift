@@ -78,3 +78,26 @@ struct UserUpdate: Codable {
         case externalUserID = "external_user_id"
     }
 }
+
+/// Wire contract for POST /v1/installations (separate from the public model).
+struct InstallationRegistration: Encodable {
+    let applicationID: UUID
+    let deviceID: String
+    let environment: String
+    let osVersion: String
+    let appVersion: String?
+    let deviceModel: String
+    let platform = "ios"
+    let sdkVersion = "1.0.0"
+
+    enum CodingKeys: String, CodingKey {
+        case applicationID = "application_id", deviceID = "device_id"
+        case environment, platform
+        case osVersion = "os_version", appVersion = "app_version"
+        case deviceModel = "device_model", sdkVersion = "sdk_version"
+    }
+}
+
+struct InstallationRegistrationResponse: Decodable {
+    let id: UUID
+}

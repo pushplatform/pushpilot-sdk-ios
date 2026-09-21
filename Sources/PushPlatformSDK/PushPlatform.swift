@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import UserNotifications
 
 /// Main SDK façade - singleton instance for push platform integration
@@ -49,25 +50,52 @@ public class PushPlatform {
         apiKey: String,
         apiBaseURL: String = "https://api.pushplatform.example",
         environment: Environment,
-        debugMode: Bool = false
+        debugMode: Bool = false,
+        applicationID: UUID? = nil,
+        completion: ((Result<UUID, SDKError>) -> Void)? = nil
     ) {
-        configuration.configure(
-            apiKey: apiKey,
-            apiBaseURL: apiBaseURL,
-            environment: environment,
-            debugMode: debugMode
-        )
-
-        Logger.info("SDK configured with environment: \(environment.rawValue), debug: \(debugMode)")
-        Logger.debug("API key: \(Logger.apiKeyMasked(apiKey))")
-
-        // Initialize installation ID
-        do {
-            let installationID = try installationManager.initialize()
-            delegate?.didInitialize(installationID: installationID)
-        } catch {
-            Logger.error("Failed to initialize installation ID: \(error)")
-            delegate?.didFailRegisterTokens(error: error as? SDKError ?? .keychainAccessDenied)
+        DispatchQueue.main.async {
+            self.configuration.configure(
+                apiKey: apiKey, apiBaseURL: apiBaseURL,
+                environment: environment, debugMode: debugMode
+            )
+            self.installationManager.beginRegistration()
+            // Native apps may provide the application UUID in Info.plist.
+            let appID = applicationID ?? (Bundle.main.object(forInfoDictionaryKey: "PushPlatformApplicationID")
+                as? String).flatMap(UUID.init(uuidString:))
+            guard let appID = appID else {
+                let error = SDKError.apiError(statusCode: 400, message: "applicationId is required for installation registration")
+                self.delegate?.didFailRegisterTokens(error: error)
+                completion?(.failure(error))
+                return
+            }
+            do {
+                // The persisted UUID identifies the device, not the backend row.
+                let deviceID = try self.installationManager.initialize()
+                let request = InstallationRegistration(
+                    applicationID: appID, deviceID: deviceID.uuidString,
+                    environment: environment.rawValue,
+                    osVersion: UIDevice.current.systemVersion,
+                    appVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
+                    deviceModel: UIDevice.current.model
+                )
+                APIClient().registerInstallation(request) { result in
+                    DispatchQueue.main.async {
+                        switch result {
+                        case .success(let id):
+                            self.installationManager.completeRegistration(id)
+                            self.delegate?.didInitialize(installationID: id)
+                        case .failure(let error):
+                            self.delegate?.didFailRegisterTokens(error: error)
+                        }
+                        completion?(result)
+                    }
+                }
+            } catch {
+                let sdkError = error as? SDKError ?? .keychainAccessDenied
+                self.delegate?.didFailRegisterTokens(error: sdkError)
+                completion?(.failure(sdkError))
+            }
         }
     }
 

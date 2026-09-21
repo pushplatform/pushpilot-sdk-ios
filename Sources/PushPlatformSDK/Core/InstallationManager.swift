@@ -11,8 +11,11 @@ protocol InstallationManagerProtocol {
 class InstallationManager: InstallationManagerProtocol {
     static let shared = InstallationManager()
 
+    private let lock = NSLock()
     private let secureStorage: SecureStorageProtocol
     private var cachedInstallationID: UUID?
+    private var registeredInstallationID: UUID?
+    private var registrationStarted = false
 
     private init(secureStorage: SecureStorageProtocol = SecureStorage()) {
         self.secureStorage = secureStorage
@@ -27,6 +30,8 @@ class InstallationManager: InstallationManagerProtocol {
     /// - Returns: Installation ID (existing or newly generated)
     /// - Throws: SDKError.keychainAccessDenied if Keychain access fails
     func initialize() throws -> UUID {
+        lock.lock()
+        defer { lock.unlock() }
         // Check cache first
         if let cached = cachedInstallationID {
             Logger.debug("Installation ID retrieved from cache: \(cached.uuidString)")
@@ -58,12 +63,34 @@ class InstallationManager: InstallationManagerProtocol {
     /// Get current Installation ID
     /// - Returns: Installation ID if initialized, nil otherwise
     func getInstallationID() -> UUID? {
+        lock.lock()
+        defer { lock.unlock() }
+        if registrationStarted { return registeredInstallationID }
         return cachedInstallationID ?? secureStorage.getInstallationID()
+    }
+
+    // Keep the legacy Keychain UUID stable as device_id across registration retries
+    // and process restarts. The server ID is recovered by idempotent registration.
+    func beginRegistration() {
+        lock.lock()
+        defer { lock.unlock() }
+        registrationStarted = true
+        registeredInstallationID = nil
+    }
+
+    func completeRegistration(_ id: UUID) {
+        lock.lock()
+        defer { lock.unlock() }
+        registeredInstallationID = id
     }
 
     /// Reset Installation ID (for testing only)
     func resetInstallationID() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
         cachedInstallationID = nil
+        registeredInstallationID = nil
+        registrationStarted = false
         return secureStorage.deleteInstallationID()
     }
 }
