@@ -70,7 +70,7 @@ public func configure(
 **Example**:
 ```swift
 PushPlatform.shared.configure(
-    apiKey: "pk_live_abc123",
+    apiKey: "<set API key from dashboard>",
     apiBaseURL: "https://api.pushplatform.example",
     environment: .production,
     debugMode: false

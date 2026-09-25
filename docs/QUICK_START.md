@@ -286,7 +286,7 @@ Send a test notification from your backend:
 
 ```bash
 curl -X POST https://api.pushplatform.example/v1/push/send \
-  -H "Authorization: Bearer sk_live_your_secret_key" \
+  -H "Authorization: Bearer $PUSHPLATFORM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "installation_id": "YOUR_INSTALLATION_ID",
@@ -309,7 +309,7 @@ Send a VoIP push:
 
 ```bash
 curl -X POST https://api.pushplatform.example/v1/push/voip \
-  -H "Authorization: Bearer sk_live_your_secret_key" \
+  -H "Authorization: Bearer $PUSHPLATFORM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "installation_id": "YOUR_INSTALLATION_ID",
