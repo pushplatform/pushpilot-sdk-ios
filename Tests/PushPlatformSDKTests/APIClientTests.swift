@@ -352,7 +352,7 @@ final class APIClientTests: XCTestCase {
         )
 
         mockSession.mockResponse = HTTPURLResponse(
-            url: URL(string: "https://api.test.example/v1/installations/\(installationID)/subscriptions")!,
+            url: URL(string: "https://api.test.example/v1/installations/\(installationID)/tokens")!,
             statusCode: 201,
             httpVersion: nil,
             headerFields: nil
@@ -377,7 +377,7 @@ final class APIClientTests: XCTestCase {
 
         // Verify request
         XCTAssertEqual(mockSession.lastRequest?.httpMethod, "POST")
-        XCTAssertTrue(mockSession.lastRequest?.url?.path.contains("subscriptions") ?? false)
+        XCTAssertTrue(mockSession.lastRequest?.url?.path.contains("/tokens") ?? false)
     }
 
     func testCreateSubscription_VoIP() {
@@ -391,7 +391,7 @@ final class APIClientTests: XCTestCase {
         )
 
         mockSession.mockResponse = HTTPURLResponse(
-            url: URL(string: "https://api.test.example/v1/installations/\(installationID)/subscriptions")!,
+            url: URL(string: "https://api.test.example/v1/installations/\(installationID)/tokens")!,
             statusCode: 201,
             httpVersion: nil,
             headerFields: nil

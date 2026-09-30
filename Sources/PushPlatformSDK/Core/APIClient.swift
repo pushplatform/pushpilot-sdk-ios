@@ -204,7 +204,7 @@ class APIClient {
             return
         }
 
-        let url = URL(string: "\(configuration.apiBaseURL)/v1/installations/\(installationID.uuidString)/subscriptions")!
+        let url = URL(string: "\(configuration.apiBaseURL)/v1/installations/\(installationID.uuidString)/tokens")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
@@ -218,7 +218,7 @@ class APIClient {
             return
         }
 
-        Logger.debug("POST /v1/installations/\(installationID)/subscriptions: provider=\(subscription.provider)")
+        Logger.debug("POST /v1/installations/\(installationID)/tokens: provider=\(subscription.provider)")
 
         session.dataTask(with: request) { data, response, error in
             if let error = error {
