@@ -13,13 +13,13 @@ let package = Package(
         )
     ],
     dependencies: [
-        .package(path: "..")
+        .package(url: "https://github.com/pushplatform/pushpilot-sdk-ios.git", from: "1.0.0")
     ],
     targets: [
         .executableTarget(
             name: "PushPlatformExample",
             dependencies: [
-                .product(name: "PushPlatformSDK", package: "push-platform-sdk-ios")
+                .product(name: "PushPlatformSDK", package: "pushpilot-sdk-ios")
             ],
             path: "PushPlatformExample"
         )

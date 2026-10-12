@@ -1,304 +1,143 @@
-# PushPlatform iOS SDK
+# PushPilot iOS SDK
 
-Native iOS SDK for push notifications and VoIP calls integration.
+Нативный SDK для регистрации устройства в PushPilot, уведомлений APNs и входящих VoIP-звонков. Пакет самостоятельный, без сторонних зависимостей. Исходный модуль и API сохраняют имена `PushPlatformSDK` и `PushPlatform`.
 
-[![Platform](https://img.shields.io/badge/platform-iOS%2013%2B-blue.svg)](https://developer.apple.com/ios/)
-[![Swift](https://img.shields.io/badge/Swift-5.7+-orange.svg)](https://swift.org)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+Требования: iOS 13+, Swift 5.5+; для примера на SwiftUI — Swift 5.7+. Сборка приложения требует Xcode с iOS SDK. macOS, watchOS и tvOS не поддерживаются.
 
-## Features
+## Установка через Swift Package Manager
 
-- 📱 **APNs Push Notifications**: Alert, badge, sound, and silent push
-- 📞 **VoIP Push & CallKit**: Incoming call notifications with native UI
-- 👤 **User Management**: Associate installations with external user IDs
-- 🔄 **Automatic Token Management**: Handle token updates and rotation
-- 🚫 **Deduplication**: Prevent duplicate notifications by event_id
-- 🔌 **Offline Support**: Automatic retry with exponential backoff
-- 🐛 **Debug Mode**: Detailed logging without exposing tokens
-- 📦 **Swift Package Manager**: Easy integration
+В Xcode выберите **File → Add Package Dependencies**, укажите:
 
-## Requirements
+```text
+https://github.com/pushplatform/pushpilot-sdk-ios.git
+```
 
-- iOS 13.0+
-- Xcode 14.0+
-- Swift 5.7+
+Выберите версию **1.0.0** или правило **Up to Next Major Version** от `1.0.0`. Добавьте продукт **PushPlatformSDK** в target приложения.
 
-## Installation
-
-### Swift Package Manager
-
-Add the following to your `Package.swift`:
+Для приложения с `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/your-org/push-platform-sdk-ios.git", from: "1.0.0")
+    .package(url: "https://github.com/pushplatform/pushpilot-sdk-ios.git", from: "1.0.0")
 ]
+// В dependencies вашего target:
+// .product(name: "PushPlatformSDK", package: "pushpilot-sdk-ios")
 ```
 
-Or in Xcode:
-1. File → Add Packages
-2. Enter repository URL
-3. Select version and add to target
+Репозиторий публичный: GitHub-токен, доступ к приватным репозиториям и соседние checkout не нужны.
 
-## Quick Start
+## CocoaPods
 
-### 1. Configure SDK
+Podspec включён в репозиторий. Установите непосредственно из публичного Git; публикация в CocoaPods Trunk для этого не требуется:
+
+```ruby
+platform :ios, '13.0'
+target 'MyApp' do
+  use_frameworks!
+  pod 'PushPlatformSDK', :git => 'https://github.com/pushplatform/pushpilot-sdk-ios.git', :tag => 'v1.0.0'
+end
+```
+
+Выполните `pod install` и откройте созданный `.xcworkspace`. Используйте в одном target один способ подключения SDK.
+
+## Минимальный пример
+
+Получите UUID приложения PushPilot, URL вашего API и предназначенный для SDK ключ со scope `devices:write`. Не встраивайте серверные административные ключи или ключ APNs в приложение. Замените значения в примере на свои; адрес `.example` ниже — заполнитель.
 
 ```swift
+import UIKit
+import UserNotifications
 import PushPlatformSDK
 
-// In AppDelegate didFinishLaunchingWithOptions
-PushPlatform.shared.configure(
-    apiKey: "pk_live_your_api_key",
-    apiBaseURL: "https://api.pushplatform.example",
-    environment: .production,
-    debugMode: false
-)
+@main
+final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+    func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
+    ) -> Bool {
+        let center = UNUserNotificationCenter.current()
+        center.delegate = self
 
-PushPlatform.shared.delegate = self
-```
-
-### 2. Request Permissions
-
-```swift
-import UserNotifications
-
-UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
-    if granted {
-        DispatchQueue.main.async {
-            UIApplication.shared.registerForRemoteNotifications()
+        PushPlatform.shared.configure(
+            apiKey: "SDK_DEVICE_KEY",
+            apiBaseURL: "https://api.your-company.example",
+            environment: .development,
+            applicationID: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+        ) { result in
+            switch result {
+            case .success:
+                center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+                    guard granted, error == nil else { return }
+                    DispatchQueue.main.async {
+                        application.registerForRemoteNotifications()
+                    }
+                }
+            case .failure(let error):
+                print("PushPilot: \(error)")
+            }
         }
+        return true
+    }
+
+    func application(_ application: UIApplication,
+                     didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        PushPlatform.shared.didRegisterAPNsToken(deviceToken)
+    }
+
+    func application(_ application: UIApplication,
+                     didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        PushPlatform.shared.didFailToRegisterAPNs(error)
+    }
+
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                willPresent notification: UNNotification,
+                                withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        PushPlatform.shared.handleForegroundNotification(notification, completionHandler: completionHandler)
+    }
+
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                didReceive response: UNNotificationResponse,
+                                withCompletionHandler completionHandler: @escaping () -> Void) {
+        PushPlatform.shared.handleNotificationResponse(response, completionHandler: completionHandler)
     }
 }
 ```
 
-### 3. Handle APNs Token
+В существующем UIKit-приложении добавьте методы в свой `AppDelegate`, оставив его настройку UI. В SwiftUI подключите этот delegate через `@UIApplicationDelegateAdaptor(AppDelegate.self)` и уберите `@main` у `AppDelegate`.
+
+`configure` регистрирует installation асинхронно. Перед регистрацией APNs-токена, `login` и `logout` дождитесь `.success`. Вместо аргумента `applicationID` можно указать строку UUID в `Info.plist` под ключом `PushPlatformApplicationID`. UUID устройства сохраняется в Keychain; `getInstallationID()` возвращает ID, выданный сервером после успешной регистрации.
+
+После успешной настройки:
 
 ```swift
-func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-    PushPlatform.shared.didRegisterAPNsToken(deviceToken)
+PushPlatform.shared.login(userID: "user-123") { result in
+    // Обработка результата; при изменении UI перейдите на main queue.
 }
-```
-
-### 4. Implement Delegate
-
-```swift
-extension AppDelegate: PushPlatformDelegate {
-    func didInitialize(installationID: UUID) {
-        print("SDK initialized: \(installationID)")
-    }
-    
-    func didRegisterTokens() {
-        print("Tokens registered successfully")
-    }
-    
-    func didReceiveNotification(_ notification: Notification, context: NotificationContext) {
-        print("Notification: \(notification.title ?? "")")
-    }
-    
-    func didOpenNotification(_ notification: Notification, action: String?, context: NotificationContext) {
-        print("Notification opened")
-    }
-    
-    func didReceiveIncomingCall(callID: String, callerName: String, metadata: [String: Any]) {
-        print("Incoming call from \(callerName)")
-    }
-    
-    func didUpdateAPNsToken() {
-        print("APNs token updated")
-    }
-    
-    func didUpdateVoIPToken() {
-        print("VoIP token updated")
-    }
-    
-    func didFailRegisterTokens(error: SDKError) {
-        print("Registration failed: \(error)")
-    }
-}
-```
-
-### 5. User Login/Logout
-
-```swift
-// Associate installation with user
-PushPlatform.shared.login(userID: "user_12345") { result in
-    switch result {
-    case .success:
-        print("User logged in")
-    case .failure(let error):
-        print("Login failed: \(error)")
-    }
-}
-
-// Disassociate user (installation remains active)
 PushPlatform.shared.logout { result in
-    switch result {
-    case .success:
-        print("User logged out")
-    case .failure(let error):
-        print("Logout failed: \(error)")
-    }
+    // Удаляется привязка пользователя; installation остаётся.
 }
 ```
 
-## Documentation
+Для событий приложения назначьте `PushPlatform.shared.delegate`, реализовав `PushPlatformDelegate`. Delegate хранится слабо: приложение должно удерживать его. Тип уведомления SDK — `PushPlatformSDK.Notification`, чтобы не путать его с `Foundation.Notification`.
 
-- **[Quick Start Guide](docs/QUICK_START.md)**: Step-by-step integration tutorial
-- **[API Reference](docs/API_REFERENCE.md)**: Complete API documentation
-- **[Troubleshooting](docs/TROUBLESHOOTING.md)**: Common issues and solutions
-- **[Compatibility Matrix](docs/COMPATIBILITY_MATRIX.md)**: Supported iOS versions and devices
-- **[Example App](Example/)**: Complete working example with SwiftUI
+## Настройка APNs
 
-## Key Capabilities
+1. Для Bundle ID приложения включите Push Notifications в Apple Developer и добавьте capability **Push Notifications** в Xcode. Signing profile должен включать entitlement `aps-environment`.
+2. На стороне сервера PushPilot настройте APNs authentication key (`.p8`, Key ID, Team ID) либо поддерживаемый сервером сертификат. Эти данные остаются на сервере.
+3. Согласуйте Bundle ID, APNs topic и окружение: `.development` для sandbox, `.production` для production. SDK не меняет signing и entitlements; `aps-environment` определяется профилем подписи, а не `Info.plist`.
+4. Для silent push добавьте **Background Modes → Remote notifications** и обработчик `application(_:didReceiveRemoteNotification:fetchCompletionHandler:)` в приложении. SDK не предоставляет отдельного публичного обработчика фонового обновления.
+5. Для реальных VoIP-звонков добавьте **Background Modes → Voice over IP**, настройте серверный VoIP topic и отправляйте `call_id` в формате UUID и `caller_name`. SDK создаёт PushKit registry и CallKit provider автоматически; публичного переключателя отключения VoIP сейчас нет.
 
-### Push Notifications
+Подробности платформы: [регистрация APNs](https://developer.apple.com/documentation/usernotifications/registering-your-app-with-apns) и [ключи APNs](https://developer.apple.com/help/account/capabilities/communicate-with-apns-using-authentication-tokens/).
 
-- **Foreground**: Banner, sound, badge displayed while app is active
-- **Background**: Notification center display with tap-to-open
-- **Silent**: Background content updates without user notification
-- **Custom Actions**: Reply, accept, dismiss buttons
+## Возможности и ограничения
 
-### VoIP & CallKit
+- Регистрация installation, APNs/VoIP-токенов и привязка внешнего пользователя через `login`/`logout`.
+- Обработка уведомлений в foreground и нажатий через переданные системные callbacks. Дедупликация по `event_id` работает в памяти текущего процесса; SDK не может отменить уже показанное системой фоновое уведомление.
+- Повторные попытки регистрации токенов и login/logout при сетевых ошибках, HTTP 429 и 5xx. Очередь операций не сохраняется между запусками; автоматического retry первоначального `configure` нет.
+- CallKit сообщает о входящем звонке, но SDK не реализует аудиотранспорт и публичные callbacks для управления разговором. Интеграцию звонков необходимо отдельно оценить для своего приложения и требований Apple.
+- Разрешения, категории действий, переходы внутри приложения, rich media и обработка silent push настраиваются приложением. Доставка и фоновые запуски зависят от APNs и iOS.
+- SDK не содержит сертификатов или подписанного бинарного framework: установка из исходников не требует signing самого пакета. Реальный APNs требует корректно подписанного приложения и серверной конфигурации; проверяйте доставку отдельно на устройстве.
+- `debugMode: true` предназначен для разработки: логи могут содержать идентификаторы пользователя и installation. Используйте HTTPS URL своего API; значение URL по умолчанию является заполнителем.
 
-- **PushKit Integration**: VoIP push delivery even when app is terminated
-- **CallKit UI**: Native incoming call screen with accept/decline
-- **Call Metadata**: Caller name, phone number, custom data
-- **Background Handling**: Process calls without launching full UI
-
-### Deduplication
-
-- **Event ID Tracking**: Prevent duplicate notifications by `event_id`
-- **Foreground Suppression**: Duplicate foreground notifications blocked
-- **Background Logging**: Duplicate taps logged but callback fires (user intent)
-- **Call ID Deduplication**: Prevent duplicate CallKit calls
-
-### Offline Support
-
-- **Automatic Retry**: Exponential backoff (2^n seconds, max 60s)
-- **Max Retries**: 5 attempts before failure
-- **Network Errors**: Retry on connection failures
-- **Server Errors**: Retry on 5xx and 429 status codes
-- **Client Errors**: No retry on 4xx (invalid request)
-
-## Security
-
-- **Token Masking**: Device tokens logged with first 8 hex chars only
-- **No Plaintext Storage**: Tokens never stored in UserDefaults
-- **Secure Transmission**: HTTPS required for all API calls
-- **Debug Mode**: Verbose logging without exposing sensitive data
-
-## Architecture
-
-```
-PushPlatform (Singleton)
-├── Configuration
-├── InstallationManager (UUID persistence)
-├── TokenRegistry (APNs + VoIP tokens)
-├── APNsTokenManager (UIApplication delegate)
-├── PushKitManager (PKPushRegistry)
-├── UserManager (Login/logout with retry)
-├── NotificationDelegate (UNUserNotificationCenter)
-└── CallKitIntegration (CXProvider)
-```
-
-## Testing
-
-Run unit tests:
-
-```bash
-swift test
-```
-
-Run specific test:
-
-```bash
-swift test --filter SDKIntegrationTests
-```
-
-View test coverage:
-
-```bash
-swift test --enable-code-coverage
-```
-
-## Example App
-
-The Example app demonstrates all SDK features:
-
-```bash
-cd Example
-open PushPlatformExample.xcodeproj
-```
-
-See [Example/README.md](Example/README.md) for setup instructions.
-
-## Troubleshooting
-
-### No push notifications received
-
-- Verify running on **physical device** (not Simulator)
-- Check APNs certificate matches bundle ID
-- Verify `aps-environment` in entitlements (development/production)
-- Check push notification capability enabled in Xcode
-
-### Token registration fails
-
-- Verify `registerForRemoteNotifications()` called on main thread
-- Check device has network connection
-- Verify API key is valid
-- Check debug logs for detailed error messages
-
-### VoIP push not received when app terminated
-
-- Verify PushKit entitlement: `com.apple.developer.pushkit`
-- Check VoIP certificate configured in backend
-- Verify CallKit integration implemented
-- Test with sandbox environment first
-
-See [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) for more issues and solutions.
-
-## Compatibility
-
-| iOS Version | Status | Notes |
-|-------------|--------|-------|
-| iOS 17.x | ✅ Tested | Full support |
-| iOS 16.x | ✅ Tested | Full support |
-| iOS 15.x | ✅ Tested | Full support |
-| iOS 14.x | ✅ Tested | Uses `.banner` presentation option |
-| iOS 13.x | ✅ Tested | Uses `.alert` presentation option |
-| iOS 12.x | ❌ Not supported | Minimum iOS 13.0 required |
-
-See [docs/COMPATIBILITY_MATRIX.md](docs/COMPATIBILITY_MATRIX.md) for detailed compatibility information.
-
-## Contributing
-
-Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-## License
-
-This project is licensed under the MIT License - see [LICENSE](LICENSE) file for details.
-
-## Support
-
-- **Documentation**: [docs/](docs/)
-- **Issues**: [GitHub Issues](https://github.com/your-org/push-platform-sdk-ios/issues)
-- **Email**: support@pushplatform.example
-- **Slack**: [Join our community](https://pushplatform.slack.com)
-
-## Changelog
-
-See [CHANGELOG.md](CHANGELOG.md) for release history.
-
-## Roadmap
-
-- [ ] iOS 18 support
-- [ ] Rich notifications with media attachments
-- [ ] Notification categories and custom actions
-- [ ] Analytics and delivery tracking
-- [ ] SwiftUI-native API
-- [ ] Combine publishers for reactive programming
-
----
-
-Made with ❤️ by the PushPlatform team
+[Исходники примера](Example/), [история изменений](CHANGELOG.md), [Issues](https://github.com/pushplatform/pushpilot-sdk-ios/issues). Лицензия — [MIT](LICENSE).
