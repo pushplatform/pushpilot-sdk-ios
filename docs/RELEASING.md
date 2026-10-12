@@ -85,3 +85,18 @@ pod trunk register pavel.vladimiroff@gmail.com 'Pavel Vladimiroff' --description
 При необходимости используйте другой адрес аккаунта CocoaPods. Подтвердите ссылку из письма и сообщите, что Trunk авторизован. Секреты, токен и ссылку из письма в чат не передавать. После появления сессии можно отправить ранее проверенный podspec в Trunk; повторять проверки установки или unit/runtime-тесты не нужно. Обычный `pod trunk push` автоматически повторяет локальный lint/build, поэтому при продолжении следует использовать Trunk API публикации того же JSON podspec, сохранив серверную проверку.
 
 Этот журнал обновляется в отдельной ветке `release/ios-sdk-1.0.0-publication`; опубликованный тег остаётся на согласованном `main` и не перемещается.
+
+## CocoaPods Trunk — публикация завершена, 2026-10-12
+
+Владелец подтвердил авторизацию Trunk. Сессия успешно проверена; ранее проверенный `PushPlatformSDK.podspec` совпадает с файлом опубликованного тега `v1.0.0`.
+
+- В Trunk отправлен JSON podspec через тот же endpoint и serializer, которые использует `pod trunk push`, без запуска его повторного локального lint/build. Серверная проверка Trunk сохранялась.
+- Клиент получил ошибку `Calling the GitHub commit API timed out`. До повторной отправки проверено фактическое состояние: версия уже зарегистрирована и podspec опубликован. Повторный POST не выполнялся.
+- Trunk API подтверждает `PushPlatformSDK` версии `1.0.0`, время регистрации `2026-10-12 11:55:19 UTC`; endpoint опубликованного spec возвращает HTTP 200.
+- Публичный CocoaPods Specs содержит `Specs/a/4/5/PushPlatformSDK/1.0.0/PushPlatformSDK.podspec.json`; его raw URL и CocoaPods CDN возвращают HTTP 200. Источник spec — публичный Git SDK, тег `v1.0.0`.
+- Опубликованный pod: https://cocoapods.org/pods/PushPlatformSDK (страница доступна, HTTP 200).
+- GitHub Release обновлён: указаны завершённая публикация Trunk, ссылка на pod и установка `pod 'PushPlatformSDK', '1.0.0'`.
+- README и CHANGELOG обновлены для опубликованной версии. Эти изменения документации сохраняются в `release/ios-sdk-1.0.0-publication`; тег `v1.0.0` не перемещался.
+- Установку, lint, сборку, unit/integration/runtime-тесты и CI повторно не запускали. Реальные push, deploy и merge агентом не выполнялись.
+
+Публикация iOS SDK 1.0.0 завершена: Swift Package Manager, CocoaPods Trunk и установка CocoaPods непосредственно из Git-тега доступны без приватных репозиториев и соседних checkout.

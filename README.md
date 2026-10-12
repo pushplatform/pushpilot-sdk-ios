@@ -28,17 +28,17 @@ dependencies: [
 
 ## CocoaPods
 
-Podspec включён в репозиторий. Установите непосредственно из публичного Git; публикация в CocoaPods Trunk для этого не требуется:
+Версия 1.0.0 опубликована в [CocoaPods Trunk](https://cocoapods.org/pods/PushPlatformSDK):
 
 ```ruby
 platform :ios, '13.0'
 target 'MyApp' do
   use_frameworks!
-  pod 'PushPlatformSDK', :git => 'https://github.com/pushplatform/pushpilot-sdk-ios.git', :tag => 'v1.0.0'
+  pod 'PushPlatformSDK', '1.0.0'
 end
 ```
 
-Выполните `pod install` и откройте созданный `.xcworkspace`. Используйте в одном target один способ подключения SDK.
+Выполните `pod install` и откройте созданный `.xcworkspace`. При необходимости установки непосредственно из публичного Git используйте `pod 'PushPlatformSDK', :git => 'https://github.com/pushplatform/pushpilot-sdk-ios.git', :tag => 'v1.0.0'`. Используйте в одном target один способ подключения SDK.
 
 ## Минимальный пример
 
