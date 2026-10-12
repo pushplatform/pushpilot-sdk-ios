@@ -64,3 +64,24 @@ git push origin refs/tags/v1.0.0
 > Первый самостоятельный выпуск iOS SDK PushPilot из публичного репозитория. Установка через Swift Package Manager или CocoaPods по Git-тегу v1.0.0. iOS 13+, без внешних зависимостей. Имена PushPlatformSDK и PushPlatform сохранены. Исправлены упаковка, метаданные и документация; реализация SDK не изменена. Настройка APNs и ограничения описаны в README.
 
 Signing, Apple Developer и серверные APNs-данные для выпуска исходного Swift-пакета не нужны.
+
+## Публикация — 2026-10-12
+
+После merge PR #1 владелец разрешил выпуск из актуального `main`, включая GitHub Release и CocoaPods Trunk.
+
+- Актуальный `main`: `c67bcdf57ab150a5835570e4b695b173c1953bc1` (`Merge pull request #1`). Дерево совпадает с `96b27f5576f7beece6390c561956183a7712d795`; упаковка и исходники совпадают с ранее проверенным коммитом.
+- Создан и запушен annotated tag `v1.0.0`, указывающий на `c67bcdf57ab150a5835570e4b695b173c1953bc1`.
+- GitHub Release опубликован, не draft и не prerelease: https://github.com/pushplatform/pushpilot-sdk-ios/releases/tag/v1.0.0 (2026-10-12T11:49:15Z).
+- Установка SPM по версии 1.0.0 и CocoaPods по публичному Git-тегу теперь доступна.
+- Пройденные проверки не повторялись. Реальные push, deploy и merge агентом не выполнялись.
+- CocoaPods Trunk пока **не опубликован**: `pod trunk me` сообщает `You need to register a session first`; публичный Trunk API для `PushPlatformSDK` возвращает HTTP 404 (`No pod found with the specified name`).
+
+Необходимое действие владельца на этой машине:
+
+```sh
+pod trunk register pavel.vladimiroff@gmail.com 'Pavel Vladimiroff' --description='PushPilot iOS SDK release'
+```
+
+При необходимости используйте другой адрес аккаунта CocoaPods. Подтвердите ссылку из письма и сообщите, что Trunk авторизован. Секреты, токен и ссылку из письма в чат не передавать. После появления сессии можно отправить ранее проверенный podspec в Trunk; повторять проверки установки или unit/runtime-тесты не нужно. Обычный `pod trunk push` автоматически повторяет локальный lint/build, поэтому при продолжении следует использовать Trunk API публикации того же JSON podspec, сохранив серверную проверку.
+
+Этот журнал обновляется в отдельной ветке `release/ios-sdk-1.0.0-publication`; опубликованный тег остаётся на согласованном `main` и не перемещается.
