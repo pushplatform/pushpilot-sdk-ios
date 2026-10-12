@@ -33,7 +33,16 @@ ruby scripts/check-spm-installation.rb <PUBLISHED_COMMIT_SHA>
 
 Требуются Xcode и Ruby gem `xcodeproj` (уже установлен вместе с CocoaPods на машине проверки). Сборка `generic/platform=iOS Simulator`, signing отключён. Приложение не запускается, реальные push и deploy не выполняются. Не запускать проверку повторно после успешного результата без новых изменений упаковки или SDK.
 
-Результат будет внесён после push и единственной сборки чистого consumer. CocoaPods проверяется отдельно на уровне podspec; публикация в Trunk не входит в этот релиз.
+Результат — **PASS**, 2026-10-12:
+
+- Опубликованный и проверенный коммит: `0dca1fbb8f4092779bed30b2a076d96e3709d8b7`.
+- Xcode 26.3 (17C529), Apple Swift 6.2.4; `BUILD SUCCEEDED`.
+- `Package.resolved` содержит ровно один pin: `pushpilot-sdk-ios`, публичный origin и точный проверенный SHA. Зависимостей из других репозиториев нет.
+- Чистый consumer и лог: `/var/folders/by/6d96f_9s5p56nbyht2h4qzqh0000gn/T/pushpilot-ios-spm-20261012-29394-puxtaz/`, `build.log`. Эти временные артефакты не требуются пользователю для установки.
+- CocoaPods: `pod ipc spec PushPlatformSDK.podspec` успешно разобрал spec; `pod spec lint PushPlatformSDK.podspec --quick --allow-warnings` — `PushPlatformSDK.podspec passed validation`. Это проверка метаданных, без отдельной CocoaPods-сборки и без установки ещё не опубликованного тега. Публикация в Trunk не входит в этот релиз.
+- После проверки меняется только этот внутренний журнал. Исходники, Package.swift, podspec и README остаются точно теми, что проверены; повторная сборка не требуется.
+
+CI на GitHub не запускался вручную и не ожидался; автоматический CI после push проверяет владелец. Реальные push, запуск приложения и deploy не выполнялись.
 
 ## Публикация после согласования коммита
 
