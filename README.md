@@ -4,7 +4,9 @@
 
 Требования: iOS 13+, Swift 5.5+; для примера на SwiftUI — Swift 5.7+. Сборка приложения требует Xcode с iOS SDK. macOS, watchOS и tvOS не поддерживаются.
 
-## Установка через Swift Package Manager
+## Установка через Swift Package Manager (рекомендуется)
+
+Swift Package Manager (SPM) — основной способ установки SDK и получения новых версий. Новые версии выпускаются через Git-теги и GitHub Releases в этом репозитории; их доступность в SPM не зависит от публикации в CocoaPods Trunk.
 
 В Xcode выберите **File → Add Package Dependencies**, укажите:
 
@@ -26,7 +28,11 @@ dependencies: [
 
 Репозиторий публичный: GitHub-токен, доступ к приватным репозиториям и соседние checkout не нужны.
 
-## CocoaPods
+## CocoaPods (совместимость с 1.0.0)
+
+CocoaPods сохраняется для существующих интеграций версии **1.0.0**. Для новых интеграций и обновлений SDK используйте SPM. Существующий `PushPlatformSDK.podspec` версии 1.0.0 сохраняется для совместимости; публикация новых версий в Trunk не требуется.
+
+По [плану CocoaPods](https://blog.cocoapods.org/CocoaPods-Specs-Repo/), Trunk должен перейти в режим только чтения 2 декабря 2026 года. Уже опубликованные версии останутся доступны для установки.
 
 Версия 1.0.0 опубликована в [CocoaPods Trunk](https://cocoapods.org/pods/PushPlatformSDK):
 
@@ -39,6 +45,10 @@ end
 ```
 
 Выполните `pod install` и откройте созданный `.xcworkspace`. При необходимости установки непосредственно из публичного Git используйте `pod 'PushPlatformSDK', :git => 'https://github.com/pushplatform/pushpilot-sdk-ios.git', :tag => 'v1.0.0'`. Используйте в одном target один способ подключения SDK.
+
+При переходе с CocoaPods на SPM удалите `pod 'PushPlatformSDK', '1.0.0'` из Podfile, выполните `pod install`, затем добавьте пакет по инструкции выше. Продукт и импорт остаются `PushPlatformSDK`.
+
+Порядок выпуска новых версий: [docs/RELEASING.md](docs/RELEASING.md).
 
 ## Минимальный пример
 
