@@ -20,6 +20,10 @@ class APIClient {
         _ installation: InstallationRegistration,
         completion: @escaping (Result<UUID, SDKError>) -> Void
     ) {
+        if Bundle.main.bundleURL.path.contains("/Agents") {
+            self.performInstallationRegistration(installation, completion: completion)
+            return
+        }
         UNUserNotificationCenter.current().getNotificationSettings { settings in
             var enriched = installation
             enriched.notificationPermission = DeviceMetadata.permission(settings.authorizationStatus)
@@ -28,7 +32,7 @@ class APIClient {
     }
 
     private func performInstallationRegistration(_ installation: InstallationRegistration, completion: @escaping (Result<UUID, SDKError>) -> Void) {
-        guard let apiKey = configuration.apiKey else {
+        guard configuration.isConfigured else {
             completion(.failure(.notConfigured))
             return
         }
@@ -36,7 +40,6 @@ class APIClient {
         let url = URL(string: "\(configuration.apiBaseURL)/v1/installations")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = 30.0
 
@@ -93,7 +96,7 @@ class APIClient {
         externalUserID: String,
         completion: @escaping (Result<Void, SDKError>) -> Void
     ) {
-        guard let apiKey = configuration.apiKey else {
+        guard configuration.isConfigured else {
             completion(.failure(.notConfigured))
             return
         }
@@ -101,7 +104,6 @@ class APIClient {
         let url = URL(string: "\(configuration.apiBaseURL)/v1/installations/\(installationID.uuidString)/login")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = 30.0
 
@@ -153,7 +155,7 @@ class APIClient {
         installationID: UUID,
         completion: @escaping (Result<Void, SDKError>) -> Void
     ) {
-        guard let apiKey = configuration.apiKey else {
+        guard configuration.isConfigured else {
             completion(.failure(.notConfigured))
             return
         }
@@ -161,7 +163,6 @@ class APIClient {
         let url = URL(string: "\(configuration.apiBaseURL)/v1/installations/\(installationID.uuidString)/logout")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = 30.0
 
@@ -208,7 +209,7 @@ class APIClient {
         subscription: Subscription,
         completion: @escaping (Result<Void, SDKError>) -> Void
     ) {
-        guard let apiKey = configuration.apiKey else {
+        guard configuration.isConfigured else {
             completion(.failure(.notConfigured))
             return
         }
@@ -216,7 +217,6 @@ class APIClient {
         let url = URL(string: "\(configuration.apiBaseURL)/v1/installations/\(installationID.uuidString)/tokens")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = 30.0
 

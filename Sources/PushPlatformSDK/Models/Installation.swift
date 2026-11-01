@@ -71,6 +71,17 @@ public struct Subscription: Codable {
         self.token = token
         self.bundleID = bundleID
     }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(provider, forKey: .provider)
+        try container.encode(token, forKey: .token)
+        try container.encode(bundleID, forKey: .bundleID)
+        try container.encode(apnsSandbox, forKey: .apnsSandbox)
+        if !environment.isEmpty {
+            try container.encode(environment, forKey: .environment)
+        }
+    }
 }
 
 /// User association update model
@@ -104,6 +115,24 @@ struct InstallationRegistration: Encodable {
         case deviceModel = "device_model", sdkVersion = "sdk_version"
         case deviceKind = "device_kind", notificationPermission = "notification_permission"
         case locale, timezone
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(applicationID, forKey: .applicationID)
+        try container.encode(deviceID, forKey: .deviceID)
+        try container.encode(platform, forKey: .platform)
+        try container.encode(osVersion, forKey: .osVersion)
+        try container.encodeIfPresent(appVersion, forKey: .appVersion)
+        try container.encode(deviceModel, forKey: .deviceModel)
+        try container.encode(sdkVersion, forKey: .sdkVersion)
+        try container.encode(deviceKind, forKey: .deviceKind)
+        try container.encode(locale, forKey: .locale)
+        try container.encode(timezone, forKey: .timezone)
+        try container.encode(notificationPermission, forKey: .notificationPermission)
+        if !environment.isEmpty {
+            try container.encode(environment, forKey: .environment)
+        }
     }
 }
 

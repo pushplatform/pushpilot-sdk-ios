@@ -96,7 +96,7 @@ final class APIClientTests: XCTestCase {
         // Verify request
         XCTAssertEqual(mockSession.lastRequest?.httpMethod, "POST")
         XCTAssertEqual(mockSession.lastRequest?.url?.path, "/v1/installations")
-        XCTAssertEqual(mockSession.lastRequest?.value(forHTTPHeaderField: "Authorization"), "Bearer pk_test_12345678")
+        XCTAssertNil(mockSession.lastRequest?.value(forHTTPHeaderField: "Authorization"))
         XCTAssertEqual(mockSession.lastRequest?.value(forHTTPHeaderField: "Content-Type"), "application/json")
     }
 
@@ -508,9 +508,7 @@ final class APIClientTests: XCTestCase {
         waitForExpectations(timeout: 1.0)
 
         // Then
-        let authHeader = mockSession.lastRequest?.value(forHTTPHeaderField: "Authorization")
-        XCTAssertEqual(authHeader, "Bearer pk_test_12345678")
-        XCTAssertTrue(authHeader?.hasPrefix("Bearer ") ?? false)
+        XCTAssertNil(mockSession.lastRequest?.value(forHTTPHeaderField: "Authorization"))
     }
 
     func testContentTypeHeader() {

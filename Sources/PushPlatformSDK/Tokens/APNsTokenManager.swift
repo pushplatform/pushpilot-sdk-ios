@@ -23,7 +23,7 @@ class APNsTokenManager {
 
         currentToken = token
 
-        let environment = Configuration.shared.environment.rawValue
+        let environment = Configuration.shared.reportedEnvironment ?? ""
         Logger.info("APNs token received: \(Logger.tokenMasked(token)), environment: \(environment)")
 
         // Register with backend

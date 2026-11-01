@@ -1,0 +1,25 @@
+name: ios-sdk-release
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Push PushPlatformSDK.podspec to CocoaPods Trunk
+        required: true
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  trunk:
+    if: inputs.publish && github.ref == 'refs/heads/main'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+      - run: gem install cocoapods -v 1.16.2 --no-document
+      - name: Publish the podspec
+        env:
+          COCOAPODS_TRUNK_TOKEN: ${{ secrets.COCOAPODS_TRUNK_TOKEN }}
+        run: pod trunk push PushPlatformSDK.podspec --allow-warnings
