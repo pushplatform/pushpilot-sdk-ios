@@ -10,4 +10,9 @@ Console acceptance uses a disposable postgres database and real queue/worker wit
 
 ## Publication verified on 2026-11-01
 
-SPM `v1.1.0` is published at commit `f04eaa4028d8f2d02c8bbecddec3084d84386295`. Native sources are also bundled into the wrappers; no CocoaPods Trunk publication is required. [PR #4](https://github.com/pushplatform/pushpilot-sdk-ios/pull/4).
+SPM `v1.1.0` is published at commit `f04eaa4028d8f2d02c8bbecddec3084d84386295`. Native sources are also bundled into the wrappers. Bare React Native additionally resolves the public CocoaPods dependency: version 1.1.0 was published on 2026-11-01 from the unchanged v1.1.0 podspec. Bundled-path tests alone do not verify this integration. [PR #4](https://github.com/pushplatform/pushpilot-sdk-ios/pull/4).
+
+
+## CocoaPods correction, 2026-11-01
+
+Normal Trunk validation compiled SDK 1.1.0 from its immutable tag. Trunk returned an internal error after accepting the spec; version API reports a GitHub update conflict, while public Specs commit `9ad0dfc27d72d23843c49dee367e4125b4b4ec6b` and the podspec CDN expose the expected unchanged 1.1.0 spec. No duplicate push or tag movement was performed. The separate CDN version index must propagate before bare CocoaPods resolution succeeds. The RN repository now gates releases on the version index/spec/source and contains actual bare autolinking CI without a local native Pod override.

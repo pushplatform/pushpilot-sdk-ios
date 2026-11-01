@@ -28,25 +28,21 @@ dependencies: [
 
 Репозиторий публичный: GitHub-токен, доступ к приватным репозиториям и соседние checkout не нужны.
 
-## CocoaPods (совместимость с 1.0.0)
+## CocoaPods
 
-CocoaPods сохраняется для существующих интеграций версии **1.0.0**. Для новых интеграций и обновлений SDK используйте SPM. Существующий `PushPlatformSDK.podspec` версии 1.0.0 сохраняется для совместимости; публикация новых версий в Trunk не требуется.
-
-По [плану CocoaPods](https://blog.cocoapods.org/CocoaPods-Specs-Repo/), Trunk должен перейти в режим только чтения 2 декабря 2026 года. Уже опубликованные версии останутся доступны для установки.
-
-Версия 1.0.0 опубликована в [CocoaPods Trunk](https://cocoapods.org/pods/PushPlatformSDK):
+`PushPlatformSDK` версии **1.1.0** опубликован в публичном CocoaPods Trunk. Для нативного iOS-приложения:
 
 ```ruby
 platform :ios, '13.0'
 target 'MyApp' do
   use_frameworks!
-  pod 'PushPlatformSDK', '1.0.0'
+  pod 'PushPlatformSDK', '1.1.0'
 end
 ```
 
-Выполните `pod install` и откройте созданный `.xcworkspace`. При необходимости установки непосредственно из публичного Git используйте `pod 'PushPlatformSDK', :git => 'https://github.com/pushplatform/pushpilot-sdk-ios.git', :tag => 'v1.0.0'`. Используйте в одном target один способ подключения SDK.
+Выполните `pod install --repo-update` и откройте `.xcworkspace`. При использовании React Native добавлять эту строку вручную не требуется: RN bridge объявляет зависимость, CocoaPods устанавливает её через autolinking. Expo plugin по-прежнему может использовать закреплённые исходники из npm-пакета.
 
-При переходе с CocoaPods на SPM удалите `pod 'PushPlatformSDK', '1.0.0'` из Podfile, выполните `pod install`, затем добавьте пакет по инструкции выше. Продукт и импорт остаются `PushPlatformSDK`.
+Для одного target выбирайте один способ подключения SDK. При переходе на SPM удалите зависимость SDK из Podfile и выполните `pod install`, затем добавьте SPM package по инструкции выше. Продукт и импорт остаются `PushPlatformSDK`.
 
 Порядок выпуска новых версий: [docs/RELEASING.md](docs/RELEASING.md).
 
