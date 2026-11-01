@@ -14,13 +14,13 @@ Swift Package Manager (SPM) — основной способ установки
 https://github.com/pushplatform/pushpilot-sdk-ios.git
 ```
 
-Выберите версию **1.0.0** или правило **Up to Next Major Version** от `1.0.0`. Добавьте продукт **PushPlatformSDK** в target приложения.
+Выберите версию **1.1.0** или правило **Up to Next Major Version** от `1.1.0`. Добавьте продукт **PushPlatformSDK** в target приложения.
 
 Для приложения с `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/pushplatform/pushpilot-sdk-ios.git", from: "1.0.0")
+    .package(url: "https://github.com/pushplatform/pushpilot-sdk-ios.git", from: "1.1.0")
 ]
 // В dependencies вашего target:
 // .product(name: "PushPlatformSDK", package: "pushpilot-sdk-ios")
@@ -52,7 +52,7 @@ end
 
 ## Минимальный пример
 
-Получите UUID приложения PushPilot, URL вашего API и предназначенный для SDK ключ со scope `devices:write`. Не встраивайте серверные административные ключи или ключ APNs в приложение. Замените значения в примере на свои; адрес `.example` ниже — заполнитель.
+Получите UUID приложения PushPilot, URL вашего API и общий бессрочный ключ приложения — тот же, что на Android, Web и сервере. Общий ключ извлекаем и разрешает отправку только в этом приложении. Не встраивайте административные ключи платформы и секреты APNs. Замените значения в примере на свои; адрес `.example` ниже — заполнитель.
 
 ```swift
 import UIKit
@@ -69,9 +69,8 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
         center.delegate = self
 
         PushPlatform.shared.configure(
-            apiKey: "SDK_DEVICE_KEY",
+            apiKey: "APPLICATION_KEY",
             apiBaseURL: "https://api.your-company.example",
-            environment: .development,
             applicationID: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
         ) { result in
             switch result {
@@ -151,3 +150,13 @@ PushPlatform.shared.logout { result in
 - `debugMode: true` предназначен для разработки: логи могут содержать идентификаторы пользователя и installation. Используйте HTTPS URL своего API; значение URL по умолчанию является заполнителем.
 
 [Исходники примера](Example/), [история изменений](CHANGELOG.md), [Issues](https://github.com/pushplatform/pushpilot-sdk-ios/issues). Лицензия — [MIT](LICENSE).
+
+
+### Unified application contract (1.1.0)
+
+Use one application ID and its permanent application key on every platform and your server.
+The key is extractable from the client and permits device registration and message sending **only for that application**. It cannot manage the organization or billing. Rotate/revoke it in the console.
+No project or environment selection is required. Existing explicit environment arguments remain supported for compatibility.
+The SDK reports actual model, OS/SDK/app versions, language, time zone, notification permission and device kind. Unknown values remain unknown; emulator/simulator detection is not device attestation. A test subscription is a separate console flag.
+Metadata refreshes on foreground entry and after a permission change.
+APNs sandbox/production is a transport property: the SDK derives it from simulator/build entitlement when environment is omitted. Configure Push Notifications in Xcode and use a provisioning profile with the correct aps-environment.

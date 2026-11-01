@@ -45,6 +45,7 @@ public struct Installation: Codable {
 
 /// Subscription data model
 public struct Subscription: Codable {
+    public let apnsSandbox: Bool
     public let provider: String
     public let environment: String
     public let token: String
@@ -52,6 +53,7 @@ public struct Subscription: Codable {
 
     enum CodingKeys: String, CodingKey {
         case provider
+        case apnsSandbox = "apns_sandbox"
         case environment
         case token
         case bundleID = "bundle_id"
@@ -63,6 +65,7 @@ public struct Subscription: Codable {
         token: String,
         bundleID: String
     ) {
+        self.apnsSandbox = environment == "development"
         self.provider = provider
         self.environment = environment
         self.token = token
@@ -88,13 +91,19 @@ struct InstallationRegistration: Encodable {
     let appVersion: String?
     let deviceModel: String
     let platform = "ios"
-    let sdkVersion = "1.0.0"
+    let sdkVersion = "1.1.0"
+    var deviceKind: String = DeviceMetadata.kind
+    var locale: String = Locale.current.identifier
+    var timezone: String = TimeZone.current.identifier
+    var notificationPermission: String = "unknown"
 
     enum CodingKeys: String, CodingKey {
         case applicationID = "application_id", deviceID = "device_id"
         case environment, platform
         case osVersion = "os_version", appVersion = "app_version"
         case deviceModel = "device_model", sdkVersion = "sdk_version"
+        case deviceKind = "device_kind", notificationPermission = "notification_permission"
+        case locale, timezone
     }
 }
 

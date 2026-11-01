@@ -1,4 +1,5 @@
 import Foundation
+import UserNotifications
 
 /// HTTP API Client for REST API v1
 class APIClient {
@@ -19,6 +20,14 @@ class APIClient {
         _ installation: InstallationRegistration,
         completion: @escaping (Result<UUID, SDKError>) -> Void
     ) {
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            var enriched = installation
+            enriched.notificationPermission = DeviceMetadata.permission(settings.authorizationStatus)
+            self.performInstallationRegistration(enriched, completion: completion)
+        }
+    }
+
+    private func performInstallationRegistration(_ installation: InstallationRegistration, completion: @escaping (Result<UUID, SDKError>) -> Void) {
         guard let apiKey = configuration.apiKey else {
             completion(.failure(.notConfigured))
             return
