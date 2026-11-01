@@ -1,3 +1,13 @@
+# CocoaPods release prerequisite for bare React Native — 2026-11-01
+
+The standalone iOS SPM release remains independent of CocoaPods. However, a version referenced by the React Native bridge's transitive CocoaPods dependency **must also be published to Trunk and visible in its public version index before the RN release**. This corrects the earlier SPM-only release policy below. A bundled local Pod test does not prove normal bare RN autolinking.
+
+PushPlatformSDK 1.1.0 was published from the existing v1.1.0 podspec after the standard Trunk build validation. Source tag/SDK runtime were not changed. Public Specs commit: 9ad0dfc27d72d23843c49dee367e4125b4b4ec6b. After an ambiguous Trunk error, first inspect the version status, public Specs, CDN spec **and version index**; do not blindly republish an immutable version. CDN propagation can lag the accepted spec.
+
+The RN release pipeline now validates the public version/index/source/tag and runs bare autolinking in a clean macOS consumer. A release cannot be called installation-ready while that scenario is red. Older SPM-only/bundled-wrapper statements below describe the historical distribution policy.
+
+---
+
 # Выпуск самостоятельного iOS SDK PushPilot
 
 Актуальный порядок выпуска и архив публикации 1.0.0. Инструкция по установке находится в [README.md](../README.md).
