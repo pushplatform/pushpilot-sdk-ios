@@ -151,3 +151,13 @@ PushPlatform.shared.logout { result in
 - `debugMode: true` предназначен для разработки: логи могут содержать идентификаторы пользователя и installation. Используйте HTTPS URL своего API; значение URL по умолчанию является заполнителем.
 
 [Исходники примера](Example/), [история изменений](CHANGELOG.md), [Issues](https://github.com/pushplatform/pushpilot-sdk-ios/issues). Лицензия — [MIT](LICENSE).
+
+
+### Unified application contract (1.1.0)
+
+Use one application ID and its permanent application key on every platform and your server.
+The key is extractable from the client and permits device registration and message sending **only for that application**. It cannot manage the organization or billing. Rotate/revoke it in the console.
+No project or environment selection is required. Existing explicit environment arguments remain supported for compatibility.
+The SDK reports actual model, OS/SDK/app versions, language, time zone, notification permission and device kind. Unknown values remain unknown; emulator/simulator detection is not device attestation. A test subscription is a separate console flag.
+Metadata refreshes on foreground entry and after a permission change.
+APNs sandbox/production is a transport property: the SDK derives it from simulator/build entitlement when environment is omitted. Configure Push Notifications in Xcode and use a provisioning profile with the correct aps-environment.

@@ -15,8 +15,11 @@ public class PushPlatform {
     private var pushKitManager: PushKitManager?
     private var userManager: UserManager?
     private var notificationDelegate: NotificationDelegate?
+    private var applicationID: UUID?
+    private var activityObserver: NSObjectProtocol?
 
     private init() {
+        activityObserver = NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in self?.refreshMetadata() }
         // Initialize API client
         let apiClient = APIClient()
 
@@ -49,7 +52,7 @@ public class PushPlatform {
     public func configure(
         apiKey: String,
         apiBaseURL: String = "https://api.pushplatform.example",
-        environment: Environment,
+        environment: Environment = .automatic,
         debugMode: Bool = false,
         applicationID: UUID? = nil,
         completion: ((Result<UUID, SDKError>) -> Void)? = nil
@@ -69,6 +72,7 @@ public class PushPlatform {
                 completion?(.failure(error))
                 return
             }
+            self.applicationID = appID
             do {
                 // The persisted UUID identifies the device, not the backend row.
                 let deviceID = try self.installationManager.initialize()
@@ -77,7 +81,7 @@ public class PushPlatform {
                     environment: environment.rawValue,
                     osVersion: UIDevice.current.systemVersion,
                     appVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
-                    deviceModel: UIDevice.current.model
+                    deviceModel: DeviceMetadata.model
                 )
                 APIClient().registerInstallation(request) { result in
                     DispatchQueue.main.async {
@@ -95,6 +99,22 @@ public class PushPlatform {
                 let sdkError = error as? SDKError ?? .keychainAccessDenied
                 self.delegate?.didFailRegisterTokens(error: sdkError)
                 completion?(.failure(sdkError))
+            }
+        }
+    }
+
+    /// Refresh actual OS/device/permission metadata without changing the installation.
+    public func refreshMetadata() {
+        DispatchQueue.main.async {
+            guard self.configuration.isConfigured, let appID = self.applicationID,
+                  self.installationManager.getInstallationID() != nil,
+                  let deviceID = try? self.installationManager.initialize() else { return }
+            let request = InstallationRegistration(applicationID: appID, deviceID: deviceID.uuidString,
+                environment: self.configuration.environment.rawValue, osVersion: UIDevice.current.systemVersion,
+                appVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
+                deviceModel: DeviceMetadata.model)
+            APIClient().registerInstallation(request) { result in
+                if case .success(let id) = result { self.installationManager.completeRegistration(id) }
             }
         }
     }
