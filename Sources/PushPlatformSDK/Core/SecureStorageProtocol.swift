@@ -7,11 +7,14 @@ protocol SecureStorageProtocol {
     func deleteInstallationID() -> Bool
 }
 
-/// In-memory storage for testing
+/// In-memory storage for testing. A lock keeps concurrent reads and writes exclusive.
 class InMemoryStorage: SecureStorageProtocol {
     private var storage: [String: Data] = [:]
+    private let lock = NSLock()
 
     func getInstallationID() -> UUID? {
+        lock.lock()
+        defer { lock.unlock() }
         guard let data = storage["installation_id"],
               let uuidString = String(data: data, encoding: .utf8),
               let uuid = UUID(uuidString: uuidString) else {
@@ -22,11 +25,15 @@ class InMemoryStorage: SecureStorageProtocol {
 
     func saveInstallationID(_ uuid: UUID) -> Bool {
         let data = uuid.uuidString.data(using: .utf8)!
+        lock.lock()
+        defer { lock.unlock() }
         storage["installation_id"] = data
         return true
     }
 
     func deleteInstallationID() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
         storage.removeValue(forKey: "installation_id")
         return true
     }

@@ -4,6 +4,8 @@ import Foundation
 /// Thread-safe, 100 entries max, 24h TTL
 class DeduplicationCache {
     private var cache: [String: Date] = [:]
+    private var insertionOrder: [String: UInt64] = [:]
+    private var nextSequence: UInt64 = 0
     private let maxEntries = 100
     private let ttl: TimeInterval = 86400  // 24 hours
     private let queue = DispatchQueue(label: "com.pushplatform.sdk.deduplication")
@@ -20,6 +22,7 @@ class DeduplicationCache {
             // Check TTL
             if Date().timeIntervalSince(timestamp) > ttl {
                 cache.removeValue(forKey: eventID)
+                insertionOrder.removeValue(forKey: eventID)
                 return false
             }
 
@@ -27,32 +30,35 @@ class DeduplicationCache {
         }
     }
 
-    /// Add event ID to cache
+    /// Add event ID to cache. The update is synchronous so a following lookup sees it.
     func add(_ eventID: String) {
-        queue.async {
+        queue.sync {
+            self.nextSequence += 1
             self.cache[eventID] = Date()
+            self.insertionOrder[eventID] = self.nextSequence
 
-            // LRU eviction
-            if self.cache.count > self.maxEntries {
+            while self.cache.count > self.maxEntries {
                 self.evictOldest()
             }
         }
     }
 
-    /// Remove event ID from cache
+    /// Remove event ID from cache. The update is synchronous so a following lookup sees it.
     func remove(_ eventID: String) {
-        queue.async {
+        queue.sync {
             self.cache.removeValue(forKey: eventID)
+            self.insertionOrder.removeValue(forKey: eventID)
         }
     }
 
     // MARK: - Private
 
     private func evictOldest() {
-        guard let oldest = cache.min(by: { $0.value < $1.value }) else {
+        guard let oldest = insertionOrder.min(by: { $0.value < $1.value }) else {
             return
         }
         cache.removeValue(forKey: oldest.key)
+        insertionOrder.removeValue(forKey: oldest.key)
         Logger.debug("Evicted oldest event_id from deduplication cache")
     }
 }
