@@ -1,6 +1,6 @@
 # Unified application SDK release
 
-Version: 1.1.0. One application ID/key across SDKs and server. The key is deliberately extractable and grants registration and message sending only for that application; no organization/platform/billing administration.
+Version: 1.1.0. One application ID/key across SDKs and server. The key is deliberately extractable and grants device registration/read access and message sending/history only for that application; no organization/platform/billing administration.
 
 No project/environment selection is needed. Optional legacy environment arguments remain compatible. APNs sandbox/production follows the build entitlement and is a transport property. Native SDK metadata includes real model/versions/locale/timezone/permission/device kind; Web reports unknown hardware kind. Test subscription is a separate console flag.
 
@@ -8,4 +8,6 @@ Validation on 2026-11-01: Android 170 tests and release Maven staging; iOS metad
 
 Console acceptance uses a disposable postgres database and real queue/worker with guarded mock transports. Same key registers iOS/Android/Web; two native devices share an External ID, metadata/tags/test-marker persist; composer creates one message/two accepted mock deliveries. No real push, credentials exchange with Apple/Firebase, or charging occurred. Real device/provider delivery still requires the customer's actual APNs/Firebase/Web credentials, OS permission and signed builds.
 
-Publication state and PRs are recorded after registry verification; this file alone does not assert publication.
+## Publication verified on 2026-11-01
+
+SPM `v1.1.0` is published at commit `f04eaa4028d8f2d02c8bbecddec3084d84386295`. Native sources are also bundled into the wrappers; no CocoaPods Trunk publication is required. [PR #4](https://github.com/pushplatform/pushpilot-sdk-ios/pull/4).
