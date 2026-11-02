@@ -48,14 +48,14 @@ PushPlatform.shared.delegate = self
 
 ### Methods
 
-#### `configure(apiKey:apiBaseURL:environment:debugMode:)`
+#### `configure(apiKey:serverURL:environment:debugMode:)`
 
 Initialize SDK with API credentials and environment settings.
 
 ```swift
 public func configure(
     apiKey: String,
-    apiBaseURL: String,
+    serverURL: String,
     environment: Environment,
     debugMode: Bool
 )
@@ -63,7 +63,7 @@ public func configure(
 
 **Parameters**:
 - `apiKey`: API key from dashboard (devices:write scope). Format: `pk_live_...` or `pk_test_...`
-- `apiBaseURL`: Base URL for API (e.g., `https://api.pushplatform.example`)
+- `serverURL`: Base URL for API (e.g., `https://api.pushplatform.example`)
 - `environment`: `.development` or `.production`
 - `debugMode`: Enable verbose logging (disable in production)
 
@@ -71,7 +71,7 @@ public func configure(
 ```swift
 PushPlatform.shared.configure(
     apiKey: "<set API key from dashboard>",
-    apiBaseURL: "https://api.pushplatform.example",
+    serverURL: "https://api.pushplatform.example",
     environment: .production,
     debugMode: false
 )
@@ -654,7 +654,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Configure SDK
         PushPlatform.shared.configure(
             apiKey: "pk_live_your_key",
-            apiBaseURL: "https://api.pushplatform.example",
+            serverURL: "https://api.pushplatform.example",
             environment: .production,
             debugMode: false
         )

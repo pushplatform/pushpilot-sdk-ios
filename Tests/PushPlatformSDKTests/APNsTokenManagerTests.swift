@@ -19,7 +19,7 @@ final class APNsTokenManagerTests: XCTestCase {
         // Configure SDK
         Configuration.shared.configure(
             apiKey: "pk_test_12345678",
-            apiBaseURL: "https://api.test.example",
+            serverURL: "https://api.test.example",
             environment: .development,
             debugMode: false
         )
@@ -82,7 +82,7 @@ final class APNsTokenManagerTests: XCTestCase {
         // Given
         Configuration.shared.configure(
             apiKey: "pk_live_12345678",
-            apiBaseURL: "https://api.example.com",
+            serverURL: "https://api.example.com",
             environment: .production,
             debugMode: false
         )
@@ -99,7 +99,7 @@ final class APNsTokenManagerTests: XCTestCase {
         // Given
         Configuration.shared.configure(
             apiKey: "pk_test_12345678",
-            apiBaseURL: "https://api.test.example",
+            serverURL: "https://api.test.example",
             environment: .development,
             debugMode: false
         )

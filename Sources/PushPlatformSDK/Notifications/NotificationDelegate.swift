@@ -56,9 +56,6 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
             }
         }
         if display.takeDeferred(present) {
-            DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + 8) {
-                display.finish()
-            }
             return
         }
         present(display.isPrevented)

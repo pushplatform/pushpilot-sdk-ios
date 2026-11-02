@@ -99,7 +99,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Configure SDK
         PushPlatform.shared.configure(
             apiKey: "pk_live_your_api_key_here",
-            apiBaseURL: "https://api.pushplatform.example",
+            serverURL: "https://api.pushplatform.example",
             environment: .production,
             debugMode: false  // Set true for development
         )
@@ -352,7 +352,7 @@ You can display this in your app's settings or debug screen for testing.
 
 **Solutions**:
 - Check API key is valid
-- Verify `apiBaseURL` is correct
+- Verify `serverURL` is correct
 - Check device has internet connection
 - Enable debug mode to see detailed logs:
   ```swift

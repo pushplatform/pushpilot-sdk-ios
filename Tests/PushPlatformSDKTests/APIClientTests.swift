@@ -43,7 +43,7 @@ final class APIClientTests: XCTestCase {
         configuration = Configuration.shared
         configuration.configure(
             apiKey: "pk_test_12345678",
-            apiBaseURL: "https://api.test.example",
+            serverURL: "https://api.test.example",
             environment: .development,
             debugMode: false
         )
