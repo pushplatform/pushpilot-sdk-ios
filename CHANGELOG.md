@@ -1,3 +1,7 @@
+# 1.2.3 — 2026-11-02
+
+- CocoaPods.org kept the 1.0.0 README after 1.2.2 because the GitHub commit API timed out. This version exists so the site can fetch the current install text. The SDK code is unchanged.
+
 # 1.2.2 — 2026-11-02
 
 - `login` принимает metadata и отправляет её в тело login. Сервер сохраняет её в тегах пользователя.
