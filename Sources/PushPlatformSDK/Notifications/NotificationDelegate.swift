@@ -39,22 +39,29 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
             Logger.debug("Added event_id to deduplication cache: \(eventID)")
         }
 
-        // Notify app delegate
+        // Notify app delegate. A wrapper may defer the banner until its handler returns.
         let context = NotificationContext(isForeground: true)
         let display = NotificationDisplayEvent(notification: parsedNotification)
         appDelegate?.notificationWillDisplay(display)
         appDelegate?.didReceiveNotification(parsedNotification, context: context)
-        if display.isPrevented {
-            completionHandler([])
+        let present: (Bool) -> Void = { prevented in
+            if prevented {
+                completionHandler([])
+                return
+            }
+            if #available(iOS 14.0, *) {
+                completionHandler([.banner, .sound, .badge])
+            } else {
+                completionHandler([.alert, .sound, .badge])
+            }
+        }
+        if display.takeDeferred(present) {
+            DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + 8) {
+                display.finish()
+            }
             return
         }
-
-        // Show banner + sound + badge
-        if #available(iOS 14.0, *) {
-            completionHandler([.banner, .sound, .badge])
-        } else {
-            completionHandler([.alert, .sound, .badge])
-        }
+        present(display.isPrevented)
     }
 
     // MARK: - Background/Terminated Notifications
