@@ -1,3 +1,9 @@
+# 1.2.2 — 2026-11-02
+
+- `login` принимает metadata и отправляет её в тело login. Сервер сохраняет её в тегах пользователя.
+- Показ foreground-уведомления можно отложить до `finish()`, чтобы обёртка дождалась своего обработчика. Синхронный `preventDefault()` без откладывания работает как раньше.
+- `getDeviceToken()` отдаёт последний hex APNs-токен.
+
 # 1.2.1 — 2026-11-02
 
 - Install instructions in the README and on CocoaPods say 1.2.1. The 1.2.0 CocoaPods page still embeds an older README that tells you to install 1.0.0.

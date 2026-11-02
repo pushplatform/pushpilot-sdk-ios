@@ -265,7 +265,7 @@ class MockAPIClient: APIClient {
         completion(updateResult)
     }
 
-    override func loginUser(installationID: UUID, externalUserID: String, completion: @escaping (Result<Void, SDKError>) -> Void) {
+    override func loginUser(installationID: UUID, externalUserID: String, metadata: [String: Any]? = nil, completion: @escaping (Result<Void, SDKError>) -> Void) {
         updateCallCount += 1
         lastUpdateInstallationID = installationID
         lastUpdateExternalUserID = externalUserID

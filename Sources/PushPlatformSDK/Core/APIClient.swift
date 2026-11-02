@@ -94,6 +94,7 @@ class APIClient {
     func loginUser(
         installationID: UUID,
         externalUserID: String,
+        metadata: [String: Any]? = nil,
         completion: @escaping (Result<Void, SDKError>) -> Void
     ) {
         guard configuration.isConfigured else {
@@ -107,7 +108,10 @@ class APIClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = 30.0
 
-        let loginRequest = ["external_user_id": externalUserID]
+        var loginRequest: [String: Any] = ["external_user_id": externalUserID]
+        if let metadata {
+            loginRequest["metadata"] = metadata
+        }
 
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: loginRequest)

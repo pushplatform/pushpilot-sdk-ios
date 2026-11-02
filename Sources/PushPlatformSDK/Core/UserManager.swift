@@ -18,7 +18,7 @@ class UserManager {
     /// - Parameters:
     ///   - userID: External user identifier
     ///   - completion: Result callback
-    func login(userID: String, completion: @escaping (Result<Void, SDKError>) -> Void) {
+    func login(userID: String, metadata: [String: Any]? = nil, completion: @escaping (Result<Void, SDKError>) -> Void) {
         guard let installationID = installationManager.getInstallationID() else {
             Logger.error("Cannot login: installation ID not initialized")
             completion(.failure(.notConfigured))
@@ -27,7 +27,7 @@ class UserManager {
 
         Logger.info("User login: external_user_id=\(userID)")
         retryAttempt = 0
-        performLogin(installationID: installationID, externalUserID: userID, completion: completion)
+        performLogin(installationID: installationID, externalUserID: userID, metadata: metadata, completion: completion)
     }
 
     // MARK: - Logout
@@ -51,9 +51,10 @@ class UserManager {
     private func performLogin(
         installationID: UUID,
         externalUserID: String,
+        metadata: [String: Any]?,
         completion: @escaping (Result<Void, SDKError>) -> Void
     ) {
-        apiClient.loginUser(installationID: installationID, externalUserID: externalUserID) { [weak self] result in
+        apiClient.loginUser(installationID: installationID, externalUserID: externalUserID, metadata: metadata) { [weak self] result in
             guard let self = self else { return }
 
             switch result {
@@ -64,7 +65,7 @@ class UserManager {
 
             case .failure(let error):
                 if self.shouldRetry(error) {
-                    self.scheduleLoginRetry(installationID: installationID, externalUserID: externalUserID, completion: completion)
+                    self.scheduleLoginRetry(installationID: installationID, externalUserID: externalUserID, metadata: metadata, completion: completion)
                 } else {
                     Logger.error("Login failed permanently: \(error)")
                     completion(.failure(error))
@@ -112,6 +113,7 @@ class UserManager {
     private func scheduleLoginRetry(
         installationID: UUID,
         externalUserID: String,
+        metadata: [String: Any]?,
         completion: @escaping (Result<Void, SDKError>) -> Void
     ) {
         guard retryAttempt < maxRetries else {
@@ -126,7 +128,7 @@ class UserManager {
         Logger.debug("Retrying login in \(delay)s (attempt \(retryAttempt)/\(maxRetries))")
 
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
-            self?.performLogin(installationID: installationID, externalUserID: externalUserID, completion: completion)
+            self?.performLogin(installationID: installationID, externalUserID: externalUserID, metadata: metadata, completion: completion)
         }
     }
 

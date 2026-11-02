@@ -168,6 +168,7 @@ public class PushPlatform {
     ///   - completion: Result callback
     public func login(
         userID: String,
+        metadata: [String: Any]? = nil,
         completion: @escaping (Result<Void, SDKError>) -> Void
     ) {
         guard configuration.isConfigured else {
@@ -177,7 +178,7 @@ public class PushPlatform {
         }
 
         Logger.info("User login requested: userID=\(userID)")
-        userManager?.login(userID: userID, completion: completion)
+        userManager?.login(userID: userID, metadata: metadata, completion: completion)
     }
 
     /// Dissociate user from installation (installation remains active)
@@ -360,10 +361,64 @@ public extension PushPlatformDelegate {
 /// Foreground notification the application can display itself.
 public final class NotificationDisplayEvent {
     public let notification: Notification
-    private(set) var prevented = false
+    private let lock = NSLock()
+    private var prevented = false
+    private var deferred = false
+    private var finished = false
+    private var decision: ((Bool) -> Void)?
+
     init(notification: Notification) { self.notification = notification }
-    public func preventDefault() { prevented = true }
-    public var isPrevented: Bool { prevented }
+
+    public func preventDefault() {
+        lock.lock()
+        prevented = true
+        lock.unlock()
+    }
+
+    public var isPrevented: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return prevented
+    }
+
+    /// Hold the system banner until finish(). Sync delegates that never call this
+    /// still decide the banner when notificationWillDisplay returns.
+    public func deferDecision() {
+        lock.lock()
+        deferred = true
+        lock.unlock()
+    }
+
+    public func finish() {
+        lock.lock()
+        if finished {
+            lock.unlock()
+            return
+        }
+        finished = true
+        let callback = decision
+        let preventedNow = prevented
+        decision = nil
+        lock.unlock()
+        callback?(preventedNow)
+    }
+
+    func takeDeferred(_ callback: @escaping (Bool) -> Void) -> Bool {
+        lock.lock()
+        guard deferred else {
+            lock.unlock()
+            return false
+        }
+        if finished {
+            let preventedNow = prevented
+            lock.unlock()
+            callback(preventedNow)
+            return true
+        }
+        decision = callback
+        lock.unlock()
+        return true
+    }
 }
 
 // MARK: - Models (Public Aliases)
