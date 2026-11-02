@@ -208,8 +208,8 @@ class MockTokenRegistry: TokenRegistry {
     var lastProvider: String?
     var lastEnvironment: String?
 
-    override init(apiClient: APIClient = APIClient(), installationManager: InstallationManagerProtocol) {
-        super.init(apiClient: apiClient, installationManager: installationManager)
+    init(apiClient: APIClient = APIClient(), installationManager: InstallationManagerProtocol) {
+        super.init(apiClient: apiClient, installationManager: installationManager, storage: InMemoryStorage())
     }
 
     override func registerToken(_ token: Data, provider: String, environment: String) {

@@ -11,6 +11,7 @@ public class PushPlatform {
     private let installationManager = InstallationManager.shared
     private let tokenRegistry = TokenRegistry()
     private let deduplicationCache = DeduplicationCache()
+    private let openReporter = NotificationOpenReporter(subscriptionID: { SecureStorage().getSubscriptionID() })
     private var apnsTokenManager: APNsTokenManager?
     private var pushKitManager: PushKitManager?
     private var userManager: UserManager?
@@ -22,10 +23,17 @@ public class PushPlatform {
         activityObserver = NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
             RemoteNotificationIntegration.install()
             self?.refreshMetadata()
+            self?.openReporter.flush()
         }
-        DispatchQueue.main.async { RemoteNotificationIntegration.install() }
+        // A tap that launched the app is delivered only to a delegate set during launch.
+        if Thread.isMainThread {
+            RemoteNotificationIntegration.install()
+        } else {
+            DispatchQueue.main.async { RemoteNotificationIntegration.install() }
+        }
         // Initialize API client
         let apiClient = APIClient()
+        tokenRegistry.onSubscriptionID = { [openReporter] _ in openReporter.flush() }
 
         // Initialize APNs token manager
         apnsTokenManager = APNsTokenManager(tokenRegistry: tokenRegistry)
@@ -42,6 +50,7 @@ public class PushPlatform {
         if #available(iOS 10.0, *) {
             notificationDelegate = NotificationDelegate(deduplicationCache: deduplicationCache)
             notificationDelegate?.appDelegate = nil  // Set via delegate property
+            notificationDelegate?.onOpen = { [openReporter] id in openReporter.report(id) }
         }
     }
 
@@ -115,6 +124,7 @@ public class PushPlatform {
     ) {
             self.installationManager.beginRegistration()
             self.applicationID = applicationID
+            self.openReporter.start(applicationID: applicationID)
             do {
                 // The persisted UUID identifies the device, not the backend row.
                 let deviceID = try self.installationManager.initialize()
@@ -166,6 +176,12 @@ public class PushPlatform {
     /// - Returns: Installation ID if SDK initialized, nil otherwise
     public func getInstallationID() -> UUID? {
         return installationManager.getInstallationID()
+    }
+
+    /// Alert subscription id issued by the server for this device's APNs token.
+    /// Notification opens are reported with it.
+    public func getSubscriptionID() -> String? {
+        return tokenRegistry.subscriptionID
     }
 
     // MARK: - User Association

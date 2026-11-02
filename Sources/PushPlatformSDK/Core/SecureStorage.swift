@@ -6,6 +6,7 @@ import os
 class SecureStorage: SecureStorageProtocol {
     private let service: String
     private let installationIDKey = "installation_id"
+    private let subscriptionIDKey = "subscription_id"
     private static let statusLog = OSLog(subsystem: "com.pushplatform.sdk", category: "keychain")
 
     init(service: String = "com.pushplatform.sdk") {
@@ -37,6 +38,17 @@ class SecureStorage: SecureStorageProtocol {
     /// - Returns: true if successful or not found, false on error
     func deleteInstallationID() -> Bool {
         return delete(key: installationIDKey)
+    }
+
+    // MARK: - Subscription ID
+
+    /// Alert subscription id from the last token registration. Opens are reported with it.
+    func getSubscriptionID() -> String? {
+        read(key: subscriptionIDKey).flatMap { String(data: $0, encoding: .utf8) }
+    }
+
+    func saveSubscriptionID(_ id: String) -> Bool {
+        save(key: subscriptionIDKey, data: Data(id.utf8))
     }
 
     // MARK: - Keychain Wrapper

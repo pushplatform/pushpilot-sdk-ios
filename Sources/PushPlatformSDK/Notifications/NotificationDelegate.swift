@@ -7,6 +7,8 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
 
     private let deduplicationCache: DeduplicationCache
     weak var appDelegate: PushPlatformDelegate?
+    /// Receives the server notification id of a tapped notification.
+    var onOpen: ((String) -> Void)?
 
     init(deduplicationCache: DeduplicationCache) {
         self.deduplicationCache = deduplicationCache
@@ -85,6 +87,10 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
                 deduplicationCache.add(eventID)
                 Logger.debug("Added event_id to deduplication cache: \(eventID)")
             }
+        }
+
+        if actionIdentifier != UNNotificationDismissActionIdentifier, let notificationID = parsedNotification.notificationID {
+            onOpen?(notificationID)
         }
 
         // Notify app delegate
