@@ -56,6 +56,7 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
             }
         }
         if display.takeDeferred(present) {
+            display.scheduleFallback(after: Configuration.shared.foregroundBannerFallback)
             return
         }
         present(display.isPrevented)

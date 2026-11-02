@@ -52,12 +52,15 @@ public class PushPlatform {
         public var url: String?
         public var environment: Environment?
         public var debugMode: Bool
+        /// Seconds before a deferred foreground banner is shown. Zero or less waits for finish() only.
+        public var foregroundBannerFallback: TimeInterval
 
-        public init(applicationId: String, url: String? = nil, environment: Environment? = nil, debugMode: Bool = false) {
+        public init(applicationId: String, url: String? = nil, environment: Environment? = nil, debugMode: Bool = false, foregroundBannerFallback: TimeInterval = 0) {
             self.applicationId = applicationId
             self.url = url
             self.environment = environment
             self.debugMode = debugMode
+            self.foregroundBannerFallback = foregroundBannerFallback
         }
     }
 
@@ -81,6 +84,10 @@ public class PushPlatform {
                 completion?(.failure(.apiError(statusCode: 400, message: "applicationId must be a UUID")))
                 return
             }
+            guard options.foregroundBannerFallback.isFinite, options.foregroundBannerFallback >= 0 else {
+                completion?(.failure(.apiError(statusCode: 400, message: "foregroundBannerFallback must be a non-negative number of seconds")))
+                return
+            }
             self.didStart = true
             let reportedEnvironment: String?
             if let environment = options.environment {
@@ -93,7 +100,8 @@ public class PushPlatform {
             self.configuration.apply(
                 baseURL: options.url ?? Configuration.defaultAPIBaseURL,
                 reportedEnvironment: reportedEnvironment,
-                debugMode: options.debugMode
+                debugMode: options.debugMode,
+                foregroundBannerFallback: options.foregroundBannerFallback
             )
             RemoteNotificationIntegration.install()
             self.begin(applicationID: appID, reportedEnvironment: reportedEnvironment ?? "", completion: completion)
@@ -366,6 +374,7 @@ public final class NotificationDisplayEvent {
     private var deferred = false
     private var finished = false
     private var decision: ((Bool) -> Void)?
+    private var fallback: DispatchWorkItem?
 
     init(notification: Notification) { self.notification = notification }
 
@@ -398,9 +407,28 @@ public final class NotificationDisplayEvent {
         finished = true
         let callback = decision
         let preventedNow = prevented
+        let pending = fallback
         decision = nil
+        fallback = nil
         lock.unlock()
+        pending?.cancel()
         callback?(preventedNow)
+    }
+
+    /// Show the system banner if finish() has not run when the interval elapses. Zero does not schedule a fallback.
+    func scheduleFallback(after seconds: TimeInterval) {
+        guard seconds > 0 else { return }
+        let work = DispatchWorkItem { [weak self] in
+            self?.finish()
+        }
+        lock.lock()
+        if finished {
+            lock.unlock()
+            return
+        }
+        fallback = work
+        lock.unlock()
+        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + seconds, execute: work)
     }
 
     func takeDeferred(_ callback: @escaping (Bool) -> Void) -> Bool {

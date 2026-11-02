@@ -37,13 +37,16 @@ class Configuration {
     var reportedEnvironment: String?
     var environment: Environment = .production
     var debugMode: Bool = false
+    /// Seconds to wait for finish() before showing the system banner. Zero waits without a fallback.
+    var foregroundBannerFallback: TimeInterval = 0
     private(set) var isConfigured = false
 
-    func apply(baseURL: String, reportedEnvironment: String?, debugMode: Bool) {
+    func apply(baseURL: String, reportedEnvironment: String?, debugMode: Bool, foregroundBannerFallback: TimeInterval = 0) {
         serverURL = baseURL
         self.reportedEnvironment = reportedEnvironment
         environment = Environment(rawValue: reportedEnvironment ?? "") ?? .production
         self.debugMode = debugMode
+        self.foregroundBannerFallback = foregroundBannerFallback
         isConfigured = true
     }
 
@@ -56,6 +59,7 @@ class Configuration {
         reportedEnvironment = nil
         environment = .production
         debugMode = false
+        foregroundBannerFallback = 0
         isConfigured = false
     }
 }
