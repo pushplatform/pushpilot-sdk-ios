@@ -139,3 +139,11 @@ struct InstallationRegistration: Encodable {
 struct InstallationRegistrationResponse: Decodable {
     let id: UUID
 }
+
+struct TokenRegistrationResponse: Decodable {
+    let subscriptionID: String?
+
+    enum CodingKeys: String, CodingKey {
+        case subscriptionID = "subscription_id"
+    }
+}

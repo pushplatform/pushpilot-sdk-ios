@@ -5,6 +5,8 @@ protocol SecureStorageProtocol {
     func getInstallationID() -> UUID?
     func saveInstallationID(_ uuid: UUID) -> Bool
     func deleteInstallationID() -> Bool
+    func getSubscriptionID() -> String?
+    func saveSubscriptionID(_ id: String) -> Bool
 }
 
 /// In-memory storage for testing. A lock keeps concurrent reads and writes exclusive.
@@ -35,6 +37,19 @@ class InMemoryStorage: SecureStorageProtocol {
         lock.lock()
         defer { lock.unlock() }
         storage.removeValue(forKey: "installation_id")
+        return true
+    }
+
+    func getSubscriptionID() -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        return storage["subscription_id"].flatMap { String(data: $0, encoding: .utf8) }
+    }
+
+    func saveSubscriptionID(_ id: String) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        storage["subscription_id"] = Data(id.utf8)
         return true
     }
 }

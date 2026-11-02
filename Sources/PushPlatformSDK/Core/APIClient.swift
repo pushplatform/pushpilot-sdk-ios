@@ -211,7 +211,7 @@ class APIClient {
     func createSubscription(
         installationID: UUID,
         subscription: Subscription,
-        completion: @escaping (Result<Void, SDKError>) -> Void
+        completion: @escaping (Result<String?, SDKError>) -> Void
     ) {
         guard configuration.isConfigured else {
             completion(.failure(.notConfigured))
@@ -249,7 +249,8 @@ class APIClient {
 
             switch httpResponse.statusCode {
             case 200, 201:
-                completion(.success(()))
+                let registration = data.flatMap { try? JSONDecoder().decode(TokenRegistrationResponse.self, from: $0) }
+                completion(.success(registration?.subscriptionID))
             case 400...499:
                 let message = self.parseErrorMessage(from: data) ?? "Client error"
                 completion(.failure(.apiError(statusCode: httpResponse.statusCode, message: message)))
@@ -258,6 +259,52 @@ class APIClient {
                 completion(.failure(.apiError(statusCode: httpResponse.statusCode, message: message)))
             default:
                 completion(.failure(.apiError(statusCode: httpResponse.statusCode, message: "Unknown error")))
+            }
+        }.resume()
+    }
+
+    // MARK: - Notification API
+
+    /// Report a notification open. The server counts each subscription once.
+    func reportOpen(
+        notificationID: String,
+        applicationID: UUID,
+        subscriptionID: String,
+        completion: @escaping (Result<Void, SDKError>) -> Void
+    ) {
+        guard configuration.isConfigured else {
+            completion(.failure(.notConfigured))
+            return
+        }
+        guard let encodedID = notificationID.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
+              let url = URL(string: "\(configuration.serverURL)/notifications/\(encodedID)") else {
+            completion(.failure(.apiError(statusCode: 400, message: "Invalid notification id")))
+            return
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 30.0
+        let body: [String: Any] = ["app_id": applicationID.uuidString.lowercased(), "subscription_id": subscriptionID, "opened": true]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+
+        Logger.debug("PUT /notifications/\(notificationID)")
+
+        session.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(.networkError(underlying: error)))
+                return
+            }
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(.networkError(underlying: NSError(domain: "APIClient", code: -1))))
+                return
+            }
+            switch httpResponse.statusCode {
+            case 200, 204:
+                completion(.success(()))
+            default:
+                let message = self.parseErrorMessage(from: data) ?? "Open was not recorded"
+                completion(.failure(.apiError(statusCode: httpResponse.statusCode, message: message)))
             }
         }.resume()
     }

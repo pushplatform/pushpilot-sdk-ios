@@ -239,11 +239,13 @@ class MockAPIClient: APIClient {
     var lastUpdateInstallationID: UUID?
     var lastUpdateExternalUserID: String?
 
-    override func createSubscription(installationID: UUID, subscription: Subscription, completion: @escaping (Result<Void, SDKError>) -> Void) {
+    var subscriptionID: String?
+
+    override func createSubscription(installationID: UUID, subscription: Subscription, completion: @escaping (Result<String?, SDKError>) -> Void) {
         createSubscriptionCalled = true
 
         if shouldSucceed {
-            completion(.success(()))
+            completion(.success(subscriptionID))
         } else {
             completion(.failure(error ?? .networkError(underlying: NSError(domain: "Test", code: -1))))
         }

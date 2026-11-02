@@ -36,11 +36,12 @@ struct NotificationParser {
         // Extract custom data fields
         let eventID = userInfo["event_id"] as? String
         let callID = userInfo["call_id"] as? String
+        let notificationID = userInfo[notificationIDKey] as? String
 
-        // Collect all custom data (non-aps fields)
+        // Collect all custom data (non-aps fields). The server's notification id is not app data.
         var customData: [String: Any] = [:]
         for (key, value) in userInfo {
-            if let keyString = key as? String, keyString != "aps" {
+            if let keyString = key as? String, keyString != "aps", keyString != notificationIDKey {
                 customData[keyString] = value
             }
         }
@@ -52,9 +53,12 @@ struct NotificationParser {
             sound: sound,
             eventID: eventID,
             callID: callID,
-            customData: customData
+            customData: customData,
+            notificationID: notificationID
         )
     }
+
+    static let notificationIDKey = "notification_id"
 }
 
 /// Parsed notification model
@@ -77,8 +81,22 @@ public struct ParsedNotification {
     /// Call ID for VoIP calls (custom field)
     public let callID: String?
 
-    /// All custom data fields (excluding aps)
+    /// All custom data fields (excluding aps and notification_id)
     public let customData: [String: Any]
+
+    /// Server notification id. GET /notifications/{id} reports this notification.
+    public let notificationID: String?
+
+    init(title: String?, body: String?, badge: Int?, sound: String?, eventID: String?, callID: String?, customData: [String: Any], notificationID: String? = nil) {
+        self.title = title
+        self.body = body
+        self.badge = badge
+        self.sound = sound
+        self.eventID = eventID
+        self.callID = callID
+        self.customData = customData
+        self.notificationID = notificationID
+    }
 }
 
 // MARK: - Notification Context

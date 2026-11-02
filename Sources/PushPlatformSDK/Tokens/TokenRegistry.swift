@@ -4,6 +4,7 @@ import Foundation
 class TokenRegistry {
     private let apiClient: APIClient
     private let installationManager: InstallationManagerProtocol
+    private let storage: SecureStorageProtocol
     private let reachability = Reachability()
 
     private var retryAttempt = 0
@@ -11,10 +12,13 @@ class TokenRegistry {
     private var pendingRegistrations: [(Data, String, String)] = []  // (token, provider, environment)
 
     weak var delegate: TokenRegistryDelegate?
+    /// Called with the alert subscription id after it is stored.
+    var onSubscriptionID: ((String) -> Void)?
 
-    init(apiClient: APIClient = APIClient(), installationManager: InstallationManagerProtocol = InstallationManager.shared) {
+    init(apiClient: APIClient = APIClient(), installationManager: InstallationManagerProtocol = InstallationManager.shared, storage: SecureStorageProtocol = SecureStorage()) {
         self.apiClient = apiClient
         self.installationManager = installationManager
+        self.storage = storage
 
         // Start network monitoring for auto-retry on connection restore
         reachability.startMonitoring { [weak self] in
@@ -56,8 +60,11 @@ class TokenRegistry {
             guard let self = self else { return }
 
             switch result {
-            case .success:
+            case .success(let subscriptionID):
                 self.retryAttempt = 0  // Reset on success
+                if provider == "apns", let subscriptionID, self.storage.saveSubscriptionID(subscriptionID) {
+                    self.onSubscriptionID?(subscriptionID)
+                }
                 Logger.info("\(provider) token registered successfully")
                 self.delegate?.didRegisterToken(provider: provider)
 
@@ -70,6 +77,11 @@ class TokenRegistry {
                 }
             }
         }
+    }
+
+    /// Alert subscription id from the last successful APNs token registration.
+    var subscriptionID: String? {
+        storage.getSubscriptionID()
     }
 
     // MARK: - Retry Logic
