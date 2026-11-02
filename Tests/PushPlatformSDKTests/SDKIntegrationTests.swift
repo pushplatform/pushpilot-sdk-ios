@@ -33,7 +33,7 @@ final class SDKIntegrationTests: XCTestCase {
 
         PushPlatform.shared.configure(
             apiKey: "pk_test_integration_12345678",
-            apiBaseURL: "https://api.test.example",
+            serverURL: "https://api.test.example",
             environment: .development,
             debugMode: true
         )
@@ -44,7 +44,7 @@ final class SDKIntegrationTests: XCTestCase {
     func testGetInstallationID() {
         PushPlatform.shared.configure(
             apiKey: "pk_test_get_id",
-            apiBaseURL: "https://api.test.example",
+            serverURL: "https://api.test.example",
             environment: .development,
             debugMode: false
         )

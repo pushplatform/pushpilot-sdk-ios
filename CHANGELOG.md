@@ -1,3 +1,8 @@
+# 1.2.4 — 2026-11-02
+
+- Внутренний адрес называется `serverURL`. Публичный `initialize` по-прежнему принимает `url`.
+- Баннер foreground больше не показывается сам через 8 секунд. Он уходит из `finish()` после обработчика. Если обработчик не вернулся, баннер не показывается. Баннер до запуска процесса по-прежнему рисует система.
+
 # 1.2.3 — 2026-11-02
 
 - CocoaPods.org kept the 1.0.0 README after 1.2.2 because the GitHub commit API timed out. This version exists so the site can fetch the current install text. The SDK code is unchanged.

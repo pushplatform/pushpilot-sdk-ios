@@ -37,7 +37,7 @@ class APIClient {
             return
         }
 
-        let url = URL(string: "\(configuration.apiBaseURL)/v1/installations")!
+        let url = URL(string: "\(configuration.serverURL)/v1/installations")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -102,7 +102,7 @@ class APIClient {
             return
         }
 
-        let url = URL(string: "\(configuration.apiBaseURL)/v1/installations/\(installationID.uuidString)/login")!
+        let url = URL(string: "\(configuration.serverURL)/v1/installations/\(installationID.uuidString)/login")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -164,7 +164,7 @@ class APIClient {
             return
         }
 
-        let url = URL(string: "\(configuration.apiBaseURL)/v1/installations/\(installationID.uuidString)/logout")!
+        let url = URL(string: "\(configuration.serverURL)/v1/installations/\(installationID.uuidString)/logout")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -218,7 +218,7 @@ class APIClient {
             return
         }
 
-        let url = URL(string: "\(configuration.apiBaseURL)/v1/installations/\(installationID.uuidString)/tokens")!
+        let url = URL(string: "\(configuration.serverURL)/v1/installations/\(installationID.uuidString)/tokens")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")

@@ -9,7 +9,7 @@ Enable debug mode to see detailed logs:
 ```swift
 PushPlatform.shared.configure(
     apiKey: "pk_test_...",
-    apiBaseURL: "https://api.pushplatform.example",
+    serverURL: "https://api.pushplatform.example",
     environment: .development,
     debugMode: true  // Enable verbose logging
 )
