@@ -41,7 +41,13 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
 
         // Notify app delegate
         let context = NotificationContext(isForeground: true)
+        let display = NotificationDisplayEvent(notification: parsedNotification)
+        appDelegate?.notificationWillDisplay(display)
         appDelegate?.didReceiveNotification(parsedNotification, context: context)
+        if display.isPrevented {
+            completionHandler([])
+            return
+        }
 
         // Show banner + sound + badge
         if #available(iOS 14.0, *) {

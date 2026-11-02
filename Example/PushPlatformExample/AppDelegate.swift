@@ -10,12 +10,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
 
         // Configure SDK
-        PushPlatform.shared.configure(
-            apiKey: "pk_test_example_key_12345678",
-            apiBaseURL: "https://api.pushplatform.example",
+        PushPlatform.shared.initialize(PushPlatform.InitializeOptions(
+            applicationId: "00000000-0000-4000-8000-000000000001",
+            url: "https://api.pushplatform.example",
             environment: .development,
             debugMode: true
-        )
+        ))
 
         // Set delegate
         PushPlatform.shared.delegate = self

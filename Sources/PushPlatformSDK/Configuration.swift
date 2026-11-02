@@ -30,25 +30,32 @@ class Configuration {
 
     private init() {}
 
-    var apiKey: String?
-    var apiBaseURL: String = "https://api.pushplatform.example"
+    static let defaultAPIBaseURL = "https://api.pushpilot.ru"
+
+    var apiBaseURL: String = Configuration.defaultAPIBaseURL
+    /// Nil means the registration body omits environment and the server uses production.
+    var reportedEnvironment: String?
     var environment: Environment = .production
     var debugMode: Bool = false
-    var isConfigured: Bool {
-        return apiKey != nil
+    private(set) var isConfigured = false
+
+    func apply(baseURL: String, reportedEnvironment: String?, debugMode: Bool) {
+        apiBaseURL = baseURL
+        self.reportedEnvironment = reportedEnvironment
+        environment = Environment(rawValue: reportedEnvironment ?? "") ?? .production
+        self.debugMode = debugMode
+        isConfigured = true
     }
 
     func configure(apiKey: String, apiBaseURL: String, environment: Environment, debugMode: Bool) {
-        self.apiKey = apiKey
-        self.apiBaseURL = apiBaseURL
-        self.environment = environment
-        self.debugMode = debugMode
+        apply(baseURL: apiBaseURL, reportedEnvironment: environment.rawValue, debugMode: debugMode)
     }
 
     func reset() {
-        apiKey = nil
-        apiBaseURL = "https://api.pushplatform.example"
+        apiBaseURL = Configuration.defaultAPIBaseURL
+        reportedEnvironment = nil
         environment = .production
         debugMode = false
+        isConfigured = false
     }
 }

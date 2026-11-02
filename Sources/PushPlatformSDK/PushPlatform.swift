@@ -19,7 +19,11 @@ public class PushPlatform {
     private var activityObserver: NSObjectProtocol?
 
     private init() {
-        activityObserver = NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in self?.refreshMetadata() }
+        activityObserver = NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
+            RemoteNotificationIntegration.install()
+            self?.refreshMetadata()
+        }
+        DispatchQueue.main.async { RemoteNotificationIntegration.install() }
         // Initialize API client
         let apiClient = APIClient()
 
@@ -43,42 +47,72 @@ public class PushPlatform {
 
     // MARK: - Configuration
 
-    /// Initialize SDK with API key and environment
-    /// - Parameters:
-    ///   - apiKey: API key from push-platform dashboard (devices:write scope)
-    ///   - apiBaseURL: Base URL (default: https://api.pushplatform.example)
-    ///   - environment: .development (sandbox) or .production
-    ///   - debugMode: Enable verbose logging (default: false)
-    public func configure(
-        apiKey: String,
-        apiBaseURL: String = "https://api.pushplatform.example",
-        environment: Environment = .automatic,
-        debugMode: Bool = false,
-        applicationID: UUID? = nil,
-        completion: ((Result<UUID, SDKError>) -> Void)? = nil
-    ) {
+    public struct InitializeOptions {
+        public var applicationId: String
+        public var url: String?
+        public var environment: Environment?
+        public var debugMode: Bool
+
+        public init(applicationId: String, url: String? = nil, environment: Environment? = nil, debugMode: Bool = false) {
+            self.applicationId = applicationId
+            self.url = url
+            self.environment = environment
+            self.debugMode = debugMode
+        }
+    }
+
+    private var didStart = false
+    private var deviceToken: String?
+
+    /// Initialize with an application id. The server address is https://api.pushpilot.ru and the registration omits environment.
+    public func initialize(_ applicationId: String, completion: ((Result<UUID, SDKError>) -> Void)? = nil) {
+        initialize(InitializeOptions(applicationId: applicationId), completion: completion)
+    }
+
+    /// Initialize with an application id and an optional server URL and environment.
+    /// A URL without an environment registers the installation as development.
+    public func initialize(_ options: InitializeOptions, completion: ((Result<UUID, SDKError>) -> Void)? = nil) {
         DispatchQueue.main.async {
-            self.configuration.configure(
-                apiKey: apiKey, apiBaseURL: apiBaseURL,
-                environment: environment, debugMode: debugMode
-            )
-            self.installationManager.beginRegistration()
-            // Native apps may provide the application UUID in Info.plist.
-            let appID = applicationID ?? (Bundle.main.object(forInfoDictionaryKey: "PushPlatformApplicationID")
-                as? String).flatMap(UUID.init(uuidString:))
-            guard let appID = appID else {
-                let error = SDKError.apiError(statusCode: 400, message: "applicationId is required for installation registration")
-                self.delegate?.didFailRegisterTokens(error: error)
-                completion?(.failure(error))
+            if self.didStart {
+                completion?(.success(self.installationManager.getInstallationID() ?? UUID(uuidString: options.applicationId) ?? UUID()))
                 return
             }
-            self.applicationID = appID
+            guard let appID = UUID(uuidString: options.applicationId) else {
+                completion?(.failure(.apiError(statusCode: 400, message: "applicationId must be a UUID")))
+                return
+            }
+            self.didStart = true
+            let reportedEnvironment: String?
+            if let environment = options.environment {
+                reportedEnvironment = environment.rawValue
+            } else if options.url != nil {
+                reportedEnvironment = Environment.development.rawValue
+            } else {
+                reportedEnvironment = nil
+            }
+            self.configuration.apply(
+                baseURL: options.url ?? Configuration.defaultAPIBaseURL,
+                reportedEnvironment: reportedEnvironment,
+                debugMode: options.debugMode
+            )
+            RemoteNotificationIntegration.install()
+            self.begin(applicationID: appID, reportedEnvironment: reportedEnvironment ?? "", completion: completion)
+        }
+    }
+
+    private func begin(
+        applicationID: UUID,
+        reportedEnvironment: String,
+        completion: ((Result<UUID, SDKError>) -> Void)?
+    ) {
+            self.installationManager.beginRegistration()
+            self.applicationID = applicationID
             do {
                 // The persisted UUID identifies the device, not the backend row.
                 let deviceID = try self.installationManager.initialize()
                 let request = InstallationRegistration(
-                    applicationID: appID, deviceID: deviceID.uuidString,
-                    environment: environment.rawValue,
+                    applicationID: applicationID, deviceID: deviceID.uuidString,
+                    environment: reportedEnvironment,
                     osVersion: UIDevice.current.systemVersion,
                     appVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
                     deviceModel: DeviceMetadata.model
@@ -100,7 +134,6 @@ public class PushPlatform {
                 self.delegate?.didFailRegisterTokens(error: sdkError)
                 completion?(.failure(sdkError))
             }
-        }
     }
 
     /// Refresh actual OS/device/permission metadata without changing the installation.
@@ -110,7 +143,7 @@ public class PushPlatform {
                   self.installationManager.getInstallationID() != nil,
                   let deviceID = try? self.installationManager.initialize() else { return }
             let request = InstallationRegistration(applicationID: appID, deviceID: deviceID.uuidString,
-                environment: self.configuration.environment.rawValue, osVersion: UIDevice.current.systemVersion,
+                environment: self.configuration.reportedEnvironment ?? "", osVersion: UIDevice.current.systemVersion,
                 appVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
                 deviceModel: DeviceMetadata.model)
             APIClient().registerInstallation(request) { result in
@@ -173,7 +206,16 @@ public class PushPlatform {
         }
 
         Logger.info("APNs token received: \(Logger.tokenMasked(token))")
+        deviceToken = token.map { String(format: "%02x", $0) }.joined()
+        if let deviceToken {
+            delegate?.didUpdateDeviceToken(deviceToken)
+        }
         apnsTokenManager?.didReceiveAPNsToken(token)
+    }
+
+    /// Latest APNs device token, once the system has issued it.
+    public func getDeviceToken() -> String? {
+        deviceToken
     }
 
     /// Handle APNs registration failure
@@ -297,11 +339,31 @@ public protocol PushPlatformDelegate: AnyObject {
     ///   - metadata: Additional call metadata
     func didReceiveIncomingCall(callID: String, callerName: String, metadata: [String: Any])
 
+    /// Foreground notification. Call preventDefault() to hide the system banner.
+    func notificationWillDisplay(_ event: NotificationDisplayEvent)
+
+    /// Called when the APNs device token is available.
+    func didUpdateDeviceToken(_ token: String)
+
     /// Called when APNs token is updated
     func didUpdateAPNsToken()
 
     /// Called when VoIP token is updated
     func didUpdateVoIPToken()
+}
+
+public extension PushPlatformDelegate {
+    func notificationWillDisplay(_ event: NotificationDisplayEvent) {}
+    func didUpdateDeviceToken(_ token: String) {}
+}
+
+/// Foreground notification the application can display itself.
+public final class NotificationDisplayEvent {
+    public let notification: Notification
+    private(set) var prevented = false
+    init(notification: Notification) { self.notification = notification }
+    public func preventDefault() { prevented = true }
+    public var isPrevented: Bool { prevented }
 }
 
 // MARK: - Models (Public Aliases)

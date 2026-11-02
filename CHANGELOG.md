@@ -1,3 +1,9 @@
+# 1.2.0 — 2026-11-01
+
+- `initialize` takes an application id or options with `url` and `environment`. Registration does not send a secret.
+- The SDK receives the APNs token and notification taps itself, and a foreground notification can call `preventDefault()`.
+- CocoaPods `PushPlatformSDK` 1.2.0 and git tag `v1.2.0` are commit `c7f497f`. A later cache-eviction fix is not part of this tag.
+
 # 1.1.0 — 2026-11-01
 
 - Unified application ID and permanent shared application key for SDK and server; no project/environment setup step.
