@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'PushPlatformSDK'
-  s.version          = '1.2.2'
+  s.version          = '1.2.3'
   s.summary          = 'PushPilot iOS SDK for APNs and VoIP notifications'
   s.description      = <<-DESC
 Native iOS SDK for PushPilot push notifications.
