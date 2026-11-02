@@ -14,13 +14,13 @@ Swift Package Manager (SPM) — основной способ установки
 https://github.com/pushplatform/pushpilot-sdk-ios.git
 ```
 
-Выберите версию **1.1.0** или правило **Up to Next Major Version** от `1.1.0`. Добавьте продукт **PushPlatformSDK** в target приложения.
+Выберите версию **1.2.0** или правило **Up to Next Major Version** от `1.2.0`. Добавьте продукт **PushPlatformSDK** в target приложения.
 
 Для приложения с `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/pushplatform/pushpilot-sdk-ios.git", from: "1.1.0")
+    .package(url: "https://github.com/pushplatform/pushpilot-sdk-ios.git", from: "1.2.0")
 ]
 // В dependencies вашего target:
 // .product(name: "PushPlatformSDK", package: "pushpilot-sdk-ios")
@@ -30,13 +30,13 @@ dependencies: [
 
 ## CocoaPods
 
-`PushPlatformSDK` версии **1.1.0** опубликован в публичном CocoaPods Trunk. Для нативного iOS-приложения:
+`PushPlatformSDK` версии **1.2.0** опубликован в публичном CocoaPods Trunk. Тег `v1.2.0` — коммит `c7f497f`. Для нативного iOS-приложения:
 
 ```ruby
 platform :ios, '13.0'
 target 'MyApp' do
   use_frameworks!
-  pod 'PushPlatformSDK', '1.1.0'
+  pod 'PushPlatformSDK', '1.2.0'
 end
 ```
 
@@ -48,7 +48,7 @@ end
 
 ## Минимальный пример
 
-Получите UUID приложения PushPilot, URL вашего API и общий бессрочный ключ приложения — тот же, что на Android, Web и сервере. Общий ключ извлекаем и разрешает отправку только в этом приложении. Не встраивайте административные ключи платформы и секреты APNs. Замените значения в примере на свои; адрес `.example` ниже — заполнитель.
+Получите UUID приложения PushPilot. Регистрация устройства секретный ключ не отправляет. Если нужен свой сервер, передайте его в `InitializeOptions.url`; без адреса SDK использует https://api.pushpilot.ru. Не встраивайте административные ключи и секреты APNs. Замените UUID в примере на свой.
 
 ```swift
 import UIKit
@@ -64,11 +64,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
         let center = UNUserNotificationCenter.current()
         center.delegate = self
 
-        PushPlatform.shared.configure(
-            apiKey: "APPLICATION_KEY",
-            apiBaseURL: "https://api.your-company.example",
-            applicationID: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
-        ) { result in
+        PushPlatform.shared.initialize("11111111-1111-1111-1111-111111111111") { result in
             switch result {
             case .success:
                 center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
@@ -147,6 +143,10 @@ PushPlatform.shared.logout { result in
 
 [Исходники примера](Example/), [история изменений](CHANGELOG.md), [Issues](https://github.com/pushplatform/pushpilot-sdk-ios/issues). Лицензия — [MIT](LICENSE).
 
+
+### Текущий контракт (1.2.0)
+
+`initialize` принимает application id или options с `url` и `environment`. Секретный ключ для регистрации не нужен. Тег `v1.2.0` не включает более поздний фикс кэша дедупликации.
 
 ### Unified application contract (1.1.0)
 
