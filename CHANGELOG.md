@@ -1,3 +1,8 @@
+# 1.2.1 — 2026-11-02
+
+- Install instructions in the README and on CocoaPods say 1.2.1. The 1.2.0 CocoaPods page still embeds an older README that tells you to install 1.0.0.
+- Deduplication eviction follows insertion order and is visible to the next lookup.
+
 # 1.2.0 — 2026-11-01
 
 - `initialize` takes an application id or options with `url` and `environment`. Registration does not send a secret.

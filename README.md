@@ -14,13 +14,13 @@ Swift Package Manager (SPM) — основной способ установки
 https://github.com/pushplatform/pushpilot-sdk-ios.git
 ```
 
-Выберите версию **1.2.0** или правило **Up to Next Major Version** от `1.2.0`. Добавьте продукт **PushPlatformSDK** в target приложения.
+Выберите версию **1.2.1** или правило **Up to Next Major Version** от `1.2.1`. Добавьте продукт **PushPlatformSDK** в target приложения.
 
 Для приложения с `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/pushplatform/pushpilot-sdk-ios.git", from: "1.2.0")
+    .package(url: "https://github.com/pushplatform/pushpilot-sdk-ios.git", from: "1.2.1")
 ]
 // В dependencies вашего target:
 // .product(name: "PushPlatformSDK", package: "pushpilot-sdk-ios")
@@ -30,13 +30,13 @@ dependencies: [
 
 ## CocoaPods
 
-`PushPlatformSDK` версии **1.2.0** опубликован в публичном CocoaPods Trunk. Тег `v1.2.0` — коммит `c7f497f`. Для нативного iOS-приложения:
+`PushPlatformSDK` версии **1.2.1** — текущая версия в CocoaPods Trunk. Для нативного iOS-приложения:
 
 ```ruby
 platform :ios, '13.0'
 target 'MyApp' do
   use_frameworks!
-  pod 'PushPlatformSDK', '1.2.0'
+  pod 'PushPlatformSDK', '1.2.1'
 end
 ```
 
@@ -144,9 +144,9 @@ PushPlatform.shared.logout { result in
 [Исходники примера](Example/), [история изменений](CHANGELOG.md), [Issues](https://github.com/pushplatform/pushpilot-sdk-ios/issues). Лицензия — [MIT](LICENSE).
 
 
-### Текущий контракт (1.2.0)
+### Текущий контракт (1.2.1)
 
-`initialize` принимает application id или options с `url` и `environment`. Секретный ключ для регистрации не нужен. Тег `v1.2.0` не включает более поздний фикс кэша дедупликации.
+`initialize` принимает application id или options с `url` и `environment`. Секретный ключ для регистрации не нужен. В 1.2.1 исправлено вытеснение из кэша дедупликации. Страница CocoaPods для 1.2.0 показывает старый README с версией 1.0.0; ставьте 1.2.1.
 
 ### Unified application contract (1.1.0)
 
