@@ -1,29 +1,42 @@
-# CocoaPods release prerequisite for bare React Native — 2026-11-01
-
-The standalone iOS SPM release remains independent of CocoaPods. However, a version referenced by the React Native bridge's transitive CocoaPods dependency **must also be published to Trunk and visible in its public version index before the RN release**. This corrects the earlier SPM-only release policy below. A bundled local Pod test does not prove normal bare RN autolinking.
-
-PushPlatformSDK 1.1.0 was published from the existing v1.1.0 podspec after the standard Trunk build validation. Source tag/SDK runtime were not changed. Public Specs commit: 9ad0dfc27d72d23843c49dee367e4125b4b4ec6b. After an ambiguous Trunk error, first inspect the version status, public Specs, CDN spec **and version index**; do not blindly republish an immutable version. CDN propagation can lag the accepted spec.
-
-The RN release pipeline now validates the public version/index/source/tag and runs bare autolinking in a clean macOS consumer. A release cannot be called installation-ready while that scenario is red. Older SPM-only/bundled-wrapper statements below describe the historical distribution policy.
-
----
-
 # Выпуск самостоятельного iOS SDK PushPilot
 
-Актуальный порядок выпуска и архив публикации 1.0.0. Инструкция по установке находится в [README.md](../README.md).
+Актуальный порядок выпуска. Архив публикации 1.0.0 ниже его не отменяет. Инструкция по установке находится в [README.md](../README.md).
 
-## Основной канал выпуска — GitHub и SPM
+## Куда публикуется каждая версия
 
-Swift Package Manager (SPM) — основной рекомендуемый способ установки SDK и получения новых версий. Релиз оформляется Git-тегом `vX.Y.Z` и GitHub Release в публичном репозитории `https://github.com/pushplatform/pushpilot-sdk-ios`. SPM получает исходники по Git-тегу; отдельная публикация пакета в реестр не нужна.
+Выпуск не закрыт, пока одна и та же версия не попала в оба канала:
 
-CocoaPods Trunk не является условием выпуска: отсутствие сессии, ошибка публикации или режим только чтения не должны блокировать создание тега, GitHub Release и доступность версии через SPM. Новые версии не обязаны публиковаться в Trunk.
+1. Swift Package Manager и каталог [Swift Package Index](https://swiftpackageindex.com/pushplatform/pushpilot-sdk-ios).
+2. CocoaPods Trunk.
 
-По [плану CocoaPods](https://blog.cocoapods.org/CocoaPods-Specs-Repo/), Trunk должен перейти в режим только чтения 2 декабря 2026 года; опубликованные версии останутся доступны для установки. Сохраняем существующий `PushPlatformSDK.podspec` версии **1.0.0**, установку `pod 'PushPlatformSDK', '1.0.0'` и Git-тег `v1.0.0` для совместимости. Для новых версий рекомендуем SPM; обновлять podspec ради выпуска через SPM не требуется.
+Тег и GitHub Release без этих двух шагов выпуск не закрывают. Опубликованный тег не двигать и не переиспользовать. Уже принятую Trunk версию не перезаливать.
+
+### Swift Package Manager и Swift Package Index
+
+SPM ставит пакет по git-тегу `vX.Y.Z` из `https://github.com/pushplatform/pushpilot-sdk-ios.git`. В коммите тега должен быть корневой `Package.swift`. Отдельного реестра, куда заливают архив, у SPM нет.
+
+Swift Package Index — каталог, в котором пакет ищут. Репозиторий добавлен и влит: [PackageList #16012](https://github.com/SwiftPackageIndex/PackageList/pull/16012), URL `https://github.com/pushplatform/pushpilot-sdk-ios.git`. Следующий semver-тег индекс подхватывает сам. Повторный pull request на каждую новую версию не нужен.
+
+Если страницы пакета в индексе нет, выпуск не закрывать. Нужно снова отправить этот URL в [SwiftPackageIndex/PackageList](https://github.com/SwiftPackageIndex/PackageList): issue по шаблону Add Package или pull request в `packages.json`. Готово только после вливания.
+
+### CocoaPods Trunk
+
+Та же версия уходит в Trunk:
+
+```sh
+pod trunk push PushPlatformSDK.podspec --allow-warnings
+```
+
+Номер в podspec равен тегу. Готово, когда Trunk API, публичный spec и CDN-индекс отдают эту версию. Локальный pod и успешный lint без регистрации в Trunk публикацией не считаются. Если ответ Trunk неоднозначный, сначала проверить версию, spec и индекс и не отправлять ту же версию второй раз. CDN может отстать от уже принятого spec.
+
+React Native и Flutter, которые тянут `PushPlatformSDK` через CocoaPods, выпускаются после появления этой версии в индексе Trunk. Пока её там нет, их `pod install` не соберётся.
+
+По [плану CocoaPods](https://blog.cocoapods.org/CocoaPods-Specs-Repo/) приём новых podspec постоянно закроется 2 декабря 2026. Уже залитые версии останутся. До этой даты каждая новая версия SDK публикуется в Trunk, пропуск не заменяет публикацию. Пробная read-only неделя 2–6 ноября 2026 отклоняет любой новый podspec до пятницы 6 ноября, 12:00 ET. Тег в эту неделю создавать можно, номер версии из-за отказа не повышать: `pod trunk push` повторить, когда приём откроется. После 2 декабря 2026 в отчёте о выпуске прямо пишется, что Trunk закрыт и новая версия туда не отправлялась. Тег SPM и наличие пакета в Swift Package Index остаются обязательными.
 
 ## Порядок нового выпуска
 
 1. Подготовьте изменения и changelog для реальной новой версии, проведите review и выберите точный итоговый коммит. Изменения только документации не требуют повышения версии SDK, нового тега или GitHub Release.
-2. Подготовьте файл release notes с изменениями и инструкцией установки через SPM из README. CocoaPods 1.0.0 указывайте отдельно как сохранённую совместимость, без обещания новой версии в Trunk.
+2. Подготовьте release notes: установка через SPM и строка `pod 'PushPlatformSDK', 'X.Y.Z'`. Версия в podspec, README и notes одна и та же.
 3. Из этого репозитория создайте тег новой версии на выбранном коммите и отправьте его в публичный origin. Ниже заполните версию, полный SHA и путь к подготовленным release notes:
 
    ```sh
@@ -45,17 +58,18 @@ CocoaPods Trunk не является условием выпуска: отсу�
      --notes-file "${RELEASE_NOTES}"
    ```
 
-   Если создание GitHub Release завершилось ошибкой, повторите этот шаг для уже отправленного тега. SPM может получить версию сразу после публикации тега, независимо от GitHub Release и Trunk.
+   Если создание GitHub Release завершилось ошибкой, повторите этот шаг для уже отправленного тега. По тегу SPM уже видит версию. Это ещё не закрытый выпуск: впереди каталог и Trunk.
 
-5. Убедитесь, что публичный тег указывает на выбранный коммит, а GitHub Release опубликован, не draft. В Xcode пользователи выбирают новую версию пакета; в `Package.swift` обновляют ограничение версии при необходимости.
+5. Проверьте страницу пакета в Swift Package Index. Репозиторий уже влит в PackageList запросом [#16012](https://github.com/SwiftPackageIndex/PackageList/pull/16012). Если страницы нет, отправьте `https://github.com/pushplatform/pushpilot-sdk-ios.git` снова и дождитесь вливания.
+6. Опубликуйте ту же версию в CocoaPods Trunk командой из раздела выше. React Native и Flutter с зависимостью на этот pod выпускаются только после появления версии в CDN-индексе.
 
 Не перемещайте и не переиспользуйте опубликованные теги, включая `v1.0.0`. Signing, Apple Developer и серверные APNs-данные для выпуска исходного Swift-пакета не нужны.
 
 ## Автоматизация
 
-В репозитории нет отдельного release workflow. Единственный workflow, `.github/workflows/ci.yml`, выполняет `swift package describe` и не содержит публикации в CocoaPods или зависимости от Trunk. Выпуск выполняется командами выше; изменять CI для удаления зависимости от Trunk не требуется.
+`.github/workflows/ci.yml` гоняет тесты и ничего не публикует. `.github/workflows/release.yml` по ручному запуску с `publish: true` выполняет `pod trunk push`. Этот запуск не проверяет Swift Package Index и сам по себе выпуск не закрывает.
 
-Если выпуск будет автоматизирован, создание GitHub tag/release не должно зависеть от job публикации в Trunk или наличия CocoaPods credentials. Любая дополнительная публикация в Trunk должна оставаться необязательной и не блокировать выпуск через GitHub/SPM.
+Тег можно создать до секрета Trunk: иначе в read-only неделю SPM не выпустить. Закрытие выпуска всё равно ждёт оба канала из раздела «Куда публикуется каждая версия».
 
 ## Архив выпуска 1.0.0 — 2026-10-12
 
