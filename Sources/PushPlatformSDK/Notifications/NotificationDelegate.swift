@@ -9,6 +9,8 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
     weak var appDelegate: PushPlatformDelegate?
     /// Receives the server notification id of a tapped notification.
     var onOpen: ((String) -> Void)?
+    /// Receives a notification that was delivered to this process.
+    var onReceive: ((ParsedNotification) -> Void)?
 
     init(deduplicationCache: DeduplicationCache) {
         self.deduplicationCache = deduplicationCache
@@ -25,6 +27,7 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
     ) {
         let userInfo = notification.request.content.userInfo
         let parsedNotification = NotificationParser.parse(userInfo)
+        onReceive?(parsedNotification)
 
         Logger.debug("Foreground notification received")
 
@@ -74,6 +77,7 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
     ) {
         let userInfo = response.notification.request.content.userInfo
         let parsedNotification = NotificationParser.parse(userInfo)
+        onReceive?(parsedNotification)
         let actionIdentifier = response.actionIdentifier
 
         Logger.debug("Background notification tapped, action: \(actionIdentifier)")

@@ -37,11 +37,12 @@ struct NotificationParser {
         let eventID = userInfo["event_id"] as? String
         let callID = userInfo["call_id"] as? String
         let notificationID = userInfo[notificationIDKey] as? String
+        let badgeRevision = integer(userInfo[badgeRevisionKey])
 
         // Collect all custom data (non-aps fields). The server's notification id is not app data.
         var customData: [String: Any] = [:]
         for (key, value) in userInfo {
-            if let keyString = key as? String, keyString != "aps", keyString != notificationIDKey {
+            if let keyString = key as? String, keyString != "aps", keyString != notificationIDKey, keyString != badgeRevisionKey {
                 customData[keyString] = value
             }
         }
@@ -54,11 +55,21 @@ struct NotificationParser {
             eventID: eventID,
             callID: callID,
             customData: customData,
-            notificationID: notificationID
+            notificationID: notificationID,
+            badgeRevision: badgeRevision
         )
     }
 
     static let notificationIDKey = "notification_id"
+    static let badgeRevisionKey = "badge_revision"
+
+    private static func integer(_ value: Any?) -> Int? {
+        switch value {
+        case let number as Int: return number
+        case let number as NSNumber: return number.intValue
+        default: return nil
+        }
+    }
 }
 
 /// Parsed notification model
@@ -87,7 +98,10 @@ public struct ParsedNotification {
     /// Server notification id. GET /notifications/{id} reports this notification.
     public let notificationID: String?
 
-    init(title: String?, body: String?, badge: Int?, sound: String?, eventID: String?, callID: String?, customData: [String: Any], notificationID: String? = nil) {
+    /// Server badge revision. A clear reports the latest value it has seen.
+    public let badgeRevision: Int?
+
+    init(title: String?, body: String?, badge: Int?, sound: String?, eventID: String?, callID: String?, customData: [String: Any], notificationID: String? = nil, badgeRevision: Int? = nil) {
         self.title = title
         self.body = body
         self.badge = badge
@@ -96,6 +110,7 @@ public struct ParsedNotification {
         self.callID = callID
         self.customData = customData
         self.notificationID = notificationID
+        self.badgeRevision = badgeRevision
     }
 }
 

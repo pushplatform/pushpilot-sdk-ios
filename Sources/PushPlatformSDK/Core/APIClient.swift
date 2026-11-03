@@ -309,6 +309,52 @@ class APIClient {
         }.resume()
     }
 
+    func reportReceived(notificationID: String, applicationID: UUID, subscriptionID: String, completion: @escaping (Result<Void, SDKError>) -> Void) {
+        putJSON(path: "/notifications/\(notificationID)", body: ["app_id": applicationID.uuidString.lowercased(), "subscription_id": subscriptionID, "received": true], completion: completion)
+    }
+
+    func resetBadge(applicationID: UUID, subscriptionID: String, revision: Int?, completion: @escaping (Result<Void, SDKError>) -> Void) {
+        var body: [String: Any] = ["app_id": applicationID.uuidString.lowercased(), "subscription_id": subscriptionID]
+        if let revision { body["revision"] = revision }
+        putJSON(path: "/badge", body: body, completion: completion)
+    }
+
+    func reportSession(applicationID: UUID, subscriptionID: String, completion: @escaping (Result<Void, SDKError>) -> Void) {
+        putJSON(path: "/session", body: ["app_id": applicationID.uuidString.lowercased(), "subscription_id": subscriptionID], completion: completion)
+    }
+
+    private func putJSON(path: String, body: [String: Any], completion: @escaping (Result<Void, SDKError>) -> Void) {
+        guard configuration.isConfigured else {
+            completion(.failure(.notConfigured))
+            return
+        }
+        guard let url = URL(string: "\(configuration.serverURL)\(path)") else {
+            completion(.failure(.apiError(statusCode: 400, message: "Invalid request URL")))
+            return
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 30.0
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        session.dataTask(with: request) { data, response, error in
+            if let error = error {
+                completion(.failure(.networkError(underlying: error)))
+                return
+            }
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(.networkError(underlying: NSError(domain: "APIClient", code: -1))))
+                return
+            }
+            switch httpResponse.statusCode {
+            case 200, 204:
+                completion(.success(()))
+            default:
+                completion(.failure(.apiError(statusCode: httpResponse.statusCode, message: self.parseErrorMessage(from: data) ?? "Request failed")))
+            }
+        }.resume()
+    }
+
     // MARK: - Error Parsing
 
     private func parseErrorMessage(from data: Data?) -> String? {

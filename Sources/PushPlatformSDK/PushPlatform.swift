@@ -24,6 +24,7 @@ public class PushPlatform {
             RemoteNotificationIntegration.install()
             self?.refreshMetadata()
             self?.openReporter.flush()
+            self?.clearBadgeAndReportSession()
         }
         // A tap that launched the app is delivered only to a delegate set during launch.
         if Thread.isMainThread {
@@ -33,7 +34,10 @@ public class PushPlatform {
         }
         // Initialize API client
         let apiClient = APIClient()
-        tokenRegistry.onSubscriptionID = { [openReporter] _ in openReporter.flush() }
+        tokenRegistry.onSubscriptionID = { [openReporter] id in
+            AppGroupStore.saveSubscriptionID(id)
+            openReporter.flush()
+        }
 
         // Initialize APNs token manager
         apnsTokenManager = APNsTokenManager(tokenRegistry: tokenRegistry)
@@ -51,6 +55,9 @@ public class PushPlatform {
             notificationDelegate = NotificationDelegate(deduplicationCache: deduplicationCache)
             notificationDelegate?.appDelegate = nil  // Set via delegate property
             notificationDelegate?.onOpen = { [openReporter] id in openReporter.report(id) }
+            notificationDelegate?.onReceive = { parsed in
+                if let revision = parsed.badgeRevision { AppGroupStore.saveRevision(revision) }
+            }
         }
     }
 
@@ -125,6 +132,8 @@ public class PushPlatform {
             self.installationManager.beginRegistration()
             self.applicationID = applicationID
             self.openReporter.start(applicationID: applicationID)
+            AppGroupStore.save(serverURL: self.configuration.serverURL, applicationID: applicationID, subscriptionID: SecureStorage().getSubscriptionID())
+            self.clearBadgeAndReportSession()
             do {
                 // The persisted UUID identifies the device, not the backend row.
                 let deviceID = try self.installationManager.initialize()
@@ -285,6 +294,22 @@ public class PushPlatform {
     }
 
     // MARK: - Delegate
+
+    private func clearBadgeAndReportSession() {
+        if #available(iOS 16.0, *) {
+            UNUserNotificationCenter.current().setBadgeCount(0)
+        } else {
+            UIApplication.shared.applicationIconBadgeNumber = 0
+        }
+        guard let applicationID, let subscriptionID = SecureStorage().getSubscriptionID() else { return }
+        let revision = AppGroupStore.revision()
+        APIClient().resetBadge(applicationID: applicationID, subscriptionID: subscriptionID, revision: revision) { result in
+            if case .failure(let error) = result { Logger.warning("Badge reset was not recorded: \(error)") }
+        }
+        APIClient().reportSession(applicationID: applicationID, subscriptionID: subscriptionID) { result in
+            if case .failure(let error) = result { Logger.warning("Session was not recorded: \(error)") }
+        }
+    }
 
     /// Set delegate for SDK callbacks
     public weak var delegate: PushPlatformDelegate? {
