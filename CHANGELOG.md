@@ -1,6 +1,7 @@
 # 1.2.8 — 2026-11-04
 
 - Подтверждение получения при закрытом приложении выполняет `PushPlatformExtension` внутри пода. В target extension остаётся короткий `NotificationService.swift` и `pod 'PushPlatformSDK'`. Баннер не меняется.
+- CocoaPods Trunk отклонил `pod trunk push` (read-only test week до 6 ноября 12:00 ET). Источник правды — git-тег `v1.2.8` / SPM; повторить trunk push той же версии после открытия приёма.
 
 # 1.2.7 — 2026-11-03
 
