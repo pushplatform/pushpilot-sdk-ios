@@ -11,7 +11,8 @@ jobs:
         run: |
           udid=$(xcrun simctl list devices available | sed -n 's/.*iPhone.*(\([A-F0-9-]\{36\}\)).*/\1/p' | head -1)
           test -n "$udid"
-          xcodebuild test -scheme PushPlatformSDK -destination "id=$udid" CODE_SIGNING_ALLOWED=NO
+          # After App/Extension product split, only the Package scheme exposes the test action.
+          xcodebuild test -scheme PushPlatformSDK-Package -destination "id=$udid" CODE_SIGNING_ALLOWED=NO
       - name: Build extension-safe target with APPLICATION_EXTENSION_API_ONLY
         run: |
           xcodebuild build \
