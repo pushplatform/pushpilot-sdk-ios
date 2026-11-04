@@ -1,5 +1,5 @@
 import XCTest
-@testable import PushPlatformSDK
+@testable import PushPlatformExtension
 
 final class PushPlatformExtensionTests: XCTestCase {
     func testMainBundleIDStripsTheExtensionSuffix() {

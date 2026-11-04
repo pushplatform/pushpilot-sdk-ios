@@ -1,3 +1,7 @@
+# 1.2.9 — 2026-11-04
+
+- CocoaPods/SPM разделяют app SDK и extension-safe модуль: NSE линкует только `PushPlatformSDK/Extension` (продукт `PushPlatformExtension`) — Foundation и UserNotifications, без `UIApplication` / PushKit / CallKit. Полный `pod 'PushPlatformSDK'` (default subspec `App`) остаётся для приложения. В `NotificationService.swift` — `import PushPlatformExtension`.
+
 # 1.2.8 — 2026-11-04
 
 - Подтверждение получения при закрытом приложении выполняет `PushPlatformExtension` внутри пода. В target extension остаётся короткий `NotificationService.swift` и `pod 'PushPlatformSDK'`. Баннер не меняется.

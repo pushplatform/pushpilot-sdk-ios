@@ -1,9 +1,10 @@
 import UserNotifications
-import PushPlatformSDK
+import PushPlatformExtension
 
 /// Sample for the application Notification Service Extension target.
 /// The extension bundle id is the application bundle id plus `.PushPlatformNotificationService`.
 /// Both targets need the App Group `group.<application bundle id>.pushplatform`.
+/// Link only `PushPlatformSDK/Extension` (SPM: PushPlatformExtension). Do not link the full App SDK.
 /// The pod performs the receipt request and does not change the banner.
 class NotificationService: UNNotificationServiceExtension {
     var contentHandler: ((UNNotificationContent) -> Void)?

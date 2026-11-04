@@ -12,3 +12,10 @@ jobs:
           udid=$(xcrun simctl list devices available | sed -n 's/.*iPhone.*(\([A-F0-9-]\{36\}\)).*/\1/p' | head -1)
           test -n "$udid"
           xcodebuild test -scheme PushPlatformSDK -destination "id=$udid" CODE_SIGNING_ALLOWED=NO
+      - name: Build extension-safe target with APPLICATION_EXTENSION_API_ONLY
+        run: |
+          xcodebuild build \
+            -scheme PushPlatformExtension \
+            -destination 'generic/platform=iOS Simulator' \
+            APPLICATION_EXTENSION_API_ONLY=YES \
+            CODE_SIGNING_ALLOWED=NO
