@@ -1,0 +1,9 @@
+platform :ios, '13.0'
+use_frameworks! :linkage => :static
+install! 'cocoapods', :warn_for_unused_master_specs_repo => false
+
+target 'StaticPodSmoke' do
+  # Resolve both pods from this checkout (same as a git tag containing both podspecs).
+  pod 'PushPlatformExtension', :path => '../..'
+  pod 'PushPlatformSDK', :path => '../..'
+end

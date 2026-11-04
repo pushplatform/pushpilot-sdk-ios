@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'PushPlatformSDK'
-  s.version          = '1.2.9'
+  s.version          = '1.2.10'
   s.summary          = 'PushPilot iOS SDK for APNs and VoIP notifications'
   s.description      = <<-DESC
 Native iOS SDK for PushPilot push notifications.
@@ -13,26 +13,14 @@ Supports APNs, PushKit/VoIP, CallKit integration, and user management.
 
   s.ios.deployment_target = '13.0'
   s.swift_version = '5.5'
-  s.default_subspec = 'App'
 
-  s.subspec 'Extension' do |e|
-    e.source_files = 'Sources/PushPlatformExtension/**/*.swift'
-    e.frameworks = 'Foundation', 'UserNotifications'
-    e.pod_target_xcconfig = {
-      'DEFINES_MODULE' => 'YES',
-      'PRODUCT_MODULE_NAME' => 'PushPlatformExtension',
-      'APPLICATION_EXTENSION_API_ONLY' => 'YES'
-    }
-  end
+  s.dependency 'PushPlatformExtension', '1.2.10'
 
-  s.subspec 'App' do |a|
-    a.dependency 'PushPlatformSDK/Extension'
-    a.source_files = 'Sources/PushPlatformSDK/**/*.swift'
-    a.frameworks = 'Foundation', 'UIKit', 'UserNotifications', 'PushKit', 'CallKit', 'AVFoundation', 'Network', 'Security'
-    a.pod_target_xcconfig = {
-      'DEFINES_MODULE' => 'YES',
-      'PRODUCT_MODULE_NAME' => 'PushPlatformSDK',
-      'APPLICATION_EXTENSION_API_ONLY' => 'NO'
-    }
-  end
+  s.source_files = 'Sources/PushPlatformSDK/**/*.swift'
+  s.frameworks = 'Foundation', 'UIKit', 'UserNotifications', 'PushKit', 'CallKit', 'AVFoundation', 'Network', 'Security'
+
+  s.pod_target_xcconfig = {
+    'DEFINES_MODULE' => 'YES',
+    'APPLICATION_EXTENSION_API_ONLY' => 'NO'
+  }
 end

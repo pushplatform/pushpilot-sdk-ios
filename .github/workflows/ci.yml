@@ -2,6 +2,12 @@ name: ios-sdk-ci
 on:
   push:
   pull_request:
+
+concurrency:
+  group: ios-ci-${{ github.workflow }}-${{ github.ref }}
+  # Cancel superseded PR runs; keep main runs so queued main is not marked failure/cancelled.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   swift:
     runs-on: macos-latest
@@ -20,3 +26,9 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             APPLICATION_EXTENSION_API_ONLY=YES \
             CODE_SIGNING_ALLOWED=NO
+      - name: Static CocoaPods smoke (PushPlatformSDK + PushPlatformExtension)
+        run: |
+          command -v pod >/dev/null || gem install cocoapods --no-document
+          command -v xcodegen >/dev/null || brew install xcodegen
+          chmod +x ci/static-pod-smoke/run.sh
+          ci/static-pod-smoke/run.sh

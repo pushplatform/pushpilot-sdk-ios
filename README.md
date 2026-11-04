@@ -14,13 +14,13 @@ Swift Package Manager (SPM) — основной способ установки
 https://github.com/pushplatform/pushpilot-sdk-ios.git
 ```
 
-Выберите версию **1.2.9** или правило **Up to Next Major Version** от `1.2.9`. Добавьте продукт **PushPlatformSDK** в target приложения. Для Notification Service Extension добавьте продукт **PushPlatformExtension**, не полный SDK.
+Выберите версию **1.2.10** или правило **Up to Next Major Version** от `1.2.10`. Добавьте продукт **PushPlatformSDK** в target приложения. Для Notification Service Extension добавьте продукт **PushPlatformExtension**, не полный SDK.
 
 Для приложения с `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/pushplatform/pushpilot-sdk-ios.git", from: "1.2.9")
+    .package(url: "https://github.com/pushplatform/pushpilot-sdk-ios.git", from: "1.2.10")
 ]
 // В dependencies вашего target:
 // .product(name: "PushPlatformSDK", package: "pushpilot-sdk-ios")
@@ -31,13 +31,16 @@ dependencies: [
 
 ## CocoaPods
 
-`PushPlatformSDK` **1.2.9** ставится через Swift Package Manager. Для CocoaPods используйте ту же версию, когда она есть в Trunk (или git-тег `v1.2.9`):
+`PushPlatformSDK` **1.2.10** ставится через Swift Package Manager. Для CocoaPods используйте ту же версию, когда она есть в Trunk (или git-тег `v1.2.10`):
 
 ```ruby
 platform :ios, '13.0'
 target 'MyApp' do
   use_frameworks!
-  pod 'PushPlatformSDK', '1.2.9'
+  # While Trunk omits 1.2.10, pin both pods from the same git tag:
+  # pod 'PushPlatformExtension', :git => 'https://github.com/pushplatform/pushpilot-sdk-ios.git', :tag => 'v1.2.10'
+  # pod 'PushPlatformSDK', :git => 'https://github.com/pushplatform/pushpilot-sdk-ios.git', :tag => 'v1.2.10'
+  pod 'PushPlatformSDK', '1.2.10'
 end
 ```
 
@@ -54,11 +57,23 @@ iOS показывает баннер и не запускает приложе�
 1. В Xcode выберите **File → New → Target → Notification Service Extension**. На вопрос Activate scheme нажмите **Don't Activate**. Deployment Target совпадает с приложением и не ниже iOS 13.
 2. Bundle ID extension — bundle ID приложения плюс `.PushPlatformNotificationService`. Для `com.example.app` это `com.example.app.PushPlatformNotificationService`.
 3. На target приложения и на target extension включите capability **App Groups** и одну группу `group.<bundle id приложения>.pushplatform`. Для примера выше это `group.com.example.app.pushplatform`. В имени группы нет суффикса extension.
-4. В Podfile добавьте **только** subspec Extension в target extension (не полный App SDK — иначе сборка падает на `UIApplication` в extension). Образец файла: [Sources/PushPlatformNotificationService/NotificationService.swift](Sources/PushPlatformNotificationService/NotificationService.swift).
+4. В Podfile для приложения pin’ьте оба пода с одного git-тега (пока Trunk не отдаёт версию). В target extension — **только** `PushPlatformExtension`, не `PushPlatformSDK`. Образец: [Sources/PushPlatformNotificationService/NotificationService.swift](Sources/PushPlatformNotificationService/NotificationService.swift).
+
+```ruby
+# App target (and RN Podfile root while Trunk omits the version):
+pod 'PushPlatformExtension', :git => 'https://github.com/pushplatform/pushpilot-sdk-ios.git', :tag => 'v1.2.10'
+pod 'PushPlatformSDK', :git => 'https://github.com/pushplatform/pushpilot-sdk-ios.git', :tag => 'v1.2.10'
+
+target 'PushPlatformNotificationServiceExtension' do
+  pod 'PushPlatformExtension', :git => 'https://github.com/pushplatform/pushpilot-sdk-ios.git', :tag => 'v1.2.10'
+end
+```
+
+С Trunk:
 
 ```ruby
 target 'PushPlatformNotificationServiceExtension' do
-  pod 'PushPlatformSDK/Extension', '1.2.9'
+  pod 'PushPlatformExtension', '1.2.10'
 end
 ```
 
@@ -191,7 +206,7 @@ PushPlatform.shared.logout { result in
 
 ### Текущий контракт (1.2.1)
 
-`initialize` принимает application id или options с `url` и `environment`. Секретный ключ для регистрации не нужен. `login(userID:metadata:)` записывает metadata в теги пользователя. `getDeviceToken()` возвращает последний hex APNs-токен или `nil`, пока система его не выдала. `preventDefault()` на показе в foreground скрывает баннер, звук и бейдж, если вызван до возврата делегата. При тапе SDK сам отправляет `PUT /notifications/{id}`, даже если приложение было закрыто; до `initialize` открытие ждёт в очереди. `notification.notificationID` — id из ответа `POST /notifications`, он не попадает в `customData`. `getSubscriptionID()` возвращает id подписки APNs после регистрации токена. Ставьте 1.2.9.
+`initialize` принимает application id или options с `url` и `environment`. Секретный ключ для регистрации не нужен. `login(userID:metadata:)` записывает metadata в теги пользователя. `getDeviceToken()` возвращает последний hex APNs-токен или `nil`, пока система его не выдала. `preventDefault()` на показе в foreground скрывает баннер, звук и бейдж, если вызван до возврата делегата. При тапе SDK сам отправляет `PUT /notifications/{id}`, даже если приложение было закрыто; до `initialize` открытие ждёт в очереди. `notification.notificationID` — id из ответа `POST /notifications`, он не попадает в `customData`. `getSubscriptionID()` возвращает id подписки APNs после регистрации токена. Ставьте 1.2.10.
 
 ### Unified application contract (1.1.0)
 
