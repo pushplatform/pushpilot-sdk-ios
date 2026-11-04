@@ -1,3 +1,7 @@
+# 1.2.10 — 2026-11-04
+
+- CocoaPods: отдельный pod `PushPlatformExtension` вместо subspec `PushPlatformSDK/Extension`. App зависит от Extension как от настоящего модуля — static `use_frameworks!` больше не ломает `import PushPlatformExtension`. NSE: `pod 'PushPlatformExtension'`. Пока Trunk read-only, в Podfile pin’ьте оба пода с одного git-тега `v1.2.10`.
+
 # 1.2.9 — 2026-11-04
 
 - CocoaPods/SPM разделяют app SDK и extension-safe модуль: NSE линкует только `PushPlatformSDK/Extension` (продукт `PushPlatformExtension`) — Foundation и UserNotifications, без `UIApplication` / PushKit / CallKit. Полный `pod 'PushPlatformSDK'` (default subspec `App`) остаётся для приложения. В `NotificationService.swift` — `import PushPlatformExtension`.

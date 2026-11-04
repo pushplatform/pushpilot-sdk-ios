@@ -13,3 +13,10 @@ xcuserdata/
 
 # SPM Package Pins
 Package.resolved
+
+# Local static CocoaPods smoke artifacts
+ci/static-pod-smoke/Pods/
+ci/static-pod-smoke/DerivedData/
+ci/static-pod-smoke/*.xcworkspace
+ci/static-pod-smoke/*.xcodeproj
+ci/static-pod-smoke/Podfile.lock

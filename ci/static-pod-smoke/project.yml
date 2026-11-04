@@ -1,0 +1,28 @@
+name: StaticPodSmoke
+options:
+  bundleIdPrefix: com.pushplatform.ci
+  deploymentTarget:
+    iOS: "13.0"
+settings:
+  base:
+    PRODUCT_BUNDLE_IDENTIFIER: com.pushplatform.ci.StaticPodSmoke
+    TARGETED_DEVICE_FAMILY: "1,2"
+    SWIFT_VERSION: "5.5"
+targets:
+  StaticPodSmoke:
+    type: application
+    platform: iOS
+    sources:
+      - StaticPodSmoke
+    info:
+      path: StaticPodSmoke/Info.plist
+      properties:
+        CFBundleDisplayName: StaticPodSmoke
+        UILaunchScreen: {}
+    settings:
+      base:
+        PRODUCT_NAME: StaticPodSmoke
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGNING_ALLOWED: NO
+        CODE_SIGN_IDENTITY: ""
+        CODE_SIGNING_REQUIRED: NO
