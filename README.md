@@ -14,13 +14,13 @@ Swift Package Manager (SPM) — основной способ установки
 https://github.com/pushplatform/pushpilot-sdk-ios.git
 ```
 
-Выберите версию **1.2.7** или правило **Up to Next Major Version** от `1.2.7`. Добавьте продукт **PushPlatformSDK** в target приложения.
+Выберите версию **1.2.8** или правило **Up to Next Major Version** от `1.2.8`. Добавьте продукт **PushPlatformSDK** в target приложения.
 
 Для приложения с `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/pushplatform/pushpilot-sdk-ios.git", from: "1.2.7")
+    .package(url: "https://github.com/pushplatform/pushpilot-sdk-ios.git", from: "1.2.8")
 ]
 // В dependencies вашего target:
 // .product(name: "PushPlatformSDK", package: "pushpilot-sdk-ios")
@@ -30,13 +30,13 @@ dependencies: [
 
 ## CocoaPods
 
-`PushPlatformSDK` **1.2.7** ставится через Swift Package Manager. CocoaPods Trunk сейчас отдаёт **1.2.6**: версия 1.2.7 туда ещё не принята. Для нативного iOS-приложения через CocoaPods:
+`PushPlatformSDK` **1.2.8** ставится через Swift Package Manager. Для CocoaPods используйте ту же версию, когда она есть в Trunk:
 
 ```ruby
 platform :ios, '13.0'
 target 'MyApp' do
   use_frameworks!
-  pod 'PushPlatformSDK', '1.2.6'
+  pod 'PushPlatformSDK', '1.2.8'
 end
 ```
 
@@ -48,61 +48,49 @@ end
 
 ## Подтверждение доставки при закрытом приложении
 
-iOS показывает баннер и не запускает приложение. Счётчик `received` в этом случае отправляет Notification Service Extension. Без него баннер и открытие по нажатию остаются, а подтверждение получения при закрытом приложении не уходит. Пока приложение открыто, `received` отправляет основной SDK, extension для этого не нужен.
-
-Готовый файл лежит в git и не входит в pod и в библиотеку SPM. Его компилирует только target extension:
-
-[Sources/PushPlatformNotificationService/NotificationService.swift](Sources/PushPlatformNotificationService/NotificationService.swift)
+iOS показывает баннер и не запускает приложение. Счётчик `received` в этом случае отправляет Notification Service Extension через `PushPlatformExtension` из пода. Без target баннер и открытие по нажатию остаются. Пока приложение открыто, `received` отправляет основной SDK.
 
 1. В Xcode выберите **File → New → Target → Notification Service Extension**. На вопрос Activate scheme нажмите **Don't Activate**. Deployment Target совпадает с приложением и не ниже iOS 13.
 2. Bundle ID extension — bundle ID приложения плюс `.PushPlatformNotificationService`. Для `com.example.app` это `com.example.app.PushPlatformNotificationService`.
 3. На target приложения и на target extension включите capability **App Groups** и одну группу `group.<bundle id приложения>.pushplatform`. Для примера выше это `group.com.example.app.pushplatform`. В имени группы нет суффикса extension.
-4. Замените созданный Xcode `NotificationService.swift` файлом по пути выше. Extension не меняет заголовок, текст и картинку баннера.
+4. В Podfile добавьте тот же pod в target extension. Образец файла: [Sources/PushPlatformNotificationService/NotificationService.swift](Sources/PushPlatformNotificationService/NotificationService.swift).
+
+```ruby
+target 'PushPlatformNotificationServiceExtension' do
+  pod 'PushPlatformSDK', '1.2.8'
+end
+```
 
 ```swift
 import UserNotifications
+import PushPlatformSDK
 
-/// Add this file to a Notification Service Extension target. The extension bundle id
-/// must be the application bundle id plus `.PushPlatformNotificationService`, and both
-/// targets need the App Group `group.<application bundle id>.pushplatform`.
-/// The extension reports receipt and does not change the banner.
 class NotificationService: UNNotificationServiceExtension {
+    var contentHandler: ((UNNotificationContent) -> Void)?
+    var receivedRequest: UNNotificationRequest!
+    var bestAttemptContent: UNMutableNotificationContent?
+
     override func didReceive(_ request: UNNotificationRequest, withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void) {
-        guard let content = request.content.mutableCopy() as? UNMutableNotificationContent else {
+        self.receivedRequest = request
+        self.contentHandler = contentHandler
+        bestAttemptContent = request.content.mutableCopy() as? UNMutableNotificationContent
+        if let bestAttemptContent {
+            PushPlatformExtension.didReceive(receivedRequest, with: bestAttemptContent, withContentHandler: contentHandler)
+        } else {
             contentHandler(request.content)
-            return
         }
-        let userInfo = request.content.userInfo
-        let notificationID = userInfo["notification_id"] as? String
-        let bundleID = (Bundle.main.bundleIdentifier ?? "").replacingOccurrences(of: ".PushPlatformNotificationService", with: "")
-        let defaults = UserDefaults(suiteName: "group.\(bundleID).pushplatform")
-        let serverURL = defaults?.string(forKey: "server_url")
-        let applicationID = defaults?.string(forKey: "application_id")
-        let subscriptionID = defaults?.string(forKey: "subscription_id")
-        guard let notificationID, !notificationID.isEmpty,
-              let serverURL, let applicationID, let subscriptionID, !subscriptionID.isEmpty,
-              let encoded = notificationID.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
-              let url = URL(string: "\(serverURL)/notifications/\(encoded)") else {
-            contentHandler(content)
-            return
+    }
+
+    override func serviceExtensionTimeWillExpire() {
+        if let contentHandler, let bestAttemptContent,
+           PushPlatformExtension.serviceExtensionTimeWillExpireRequest(receivedRequest, with: bestAttemptContent) {
+            contentHandler(bestAttemptContent)
         }
-        var request = URLRequest(url: url)
-        request.httpMethod = "PUT"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try? JSONSerialization.data(withJSONObject: [
-            "app_id": applicationID,
-            "subscription_id": subscriptionID,
-            "received": true,
-        ])
-        let task = URLSession.shared.dataTask(with: request) { _, _, _ in
-            contentHandler(content)
-        }
-        task.resume()
     }
 }
 ```
 
-React Native, Expo и Flutter этот target не создают. Его добавляет владелец приложения в Xcode тем же способом.
+Extension не меняет заголовок, текст и картинку. React Native, Expo и Flutter этот target не создают. Его добавляет владелец приложения тем же способом.
 
 Получите UUID приложения PushPilot. Регистрация устройства секретный ключ не отправляет. Если нужен свой сервер, передайте его в `InitializeOptions.url`; без адреса SDK использует https://api.pushpilot.ru. Не встраивайте административные ключи и секреты APNs. Замените UUID в примере на свой.
 
@@ -202,7 +190,7 @@ PushPlatform.shared.logout { result in
 
 ### Текущий контракт (1.2.1)
 
-`initialize` принимает application id или options с `url` и `environment`. Секретный ключ для регистрации не нужен. `login(userID:metadata:)` записывает metadata в теги пользователя. `getDeviceToken()` возвращает последний hex APNs-токен или `nil`, пока система его не выдала. `preventDefault()` на показе в foreground скрывает баннер, звук и бейдж, если вызван до возврата делегата. При тапе SDK сам отправляет `PUT /notifications/{id}`, даже если приложение было закрыто; до `initialize` открытие ждёт в очереди. `notification.notificationID` — id из ответа `POST /notifications`, он не попадает в `customData`. `getSubscriptionID()` возвращает id подписки APNs после регистрации токена. Ставьте 1.2.7.
+`initialize` принимает application id или options с `url` и `environment`. Секретный ключ для регистрации не нужен. `login(userID:metadata:)` записывает metadata в теги пользователя. `getDeviceToken()` возвращает последний hex APNs-токен или `nil`, пока система его не выдала. `preventDefault()` на показе в foreground скрывает баннер, звук и бейдж, если вызван до возврата делегата. При тапе SDK сам отправляет `PUT /notifications/{id}`, даже если приложение было закрыто; до `initialize` открытие ждёт в очереди. `notification.notificationID` — id из ответа `POST /notifications`, он не попадает в `customData`. `getSubscriptionID()` возвращает id подписки APNs после регистрации токена. Ставьте 1.2.8.
 
 ### Unified application contract (1.1.0)
 
