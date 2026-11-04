@@ -14,29 +14,30 @@ Swift Package Manager (SPM) — основной способ установки
 https://github.com/pushplatform/pushpilot-sdk-ios.git
 ```
 
-Выберите версию **1.2.8** или правило **Up to Next Major Version** от `1.2.8`. Добавьте продукт **PushPlatformSDK** в target приложения.
+Выберите версию **1.2.9** или правило **Up to Next Major Version** от `1.2.9`. Добавьте продукт **PushPlatformSDK** в target приложения. Для Notification Service Extension добавьте продукт **PushPlatformExtension**, не полный SDK.
 
 Для приложения с `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/pushplatform/pushpilot-sdk-ios.git", from: "1.2.8")
+    .package(url: "https://github.com/pushplatform/pushpilot-sdk-ios.git", from: "1.2.9")
 ]
 // В dependencies вашего target:
 // .product(name: "PushPlatformSDK", package: "pushpilot-sdk-ios")
+// NSE: .product(name: "PushPlatformExtension", package: "pushpilot-sdk-ios")
 ```
 
 Репозиторий публичный: GitHub-токен, доступ к приватным репозиториям и соседние checkout не нужны.
 
 ## CocoaPods
 
-`PushPlatformSDK` **1.2.8** ставится через Swift Package Manager. Для CocoaPods используйте ту же версию, когда она есть в Trunk:
+`PushPlatformSDK` **1.2.9** ставится через Swift Package Manager. Для CocoaPods используйте ту же версию, когда она есть в Trunk (или git-тег `v1.2.9`):
 
 ```ruby
 platform :ios, '13.0'
 target 'MyApp' do
   use_frameworks!
-  pod 'PushPlatformSDK', '1.2.8'
+  pod 'PushPlatformSDK', '1.2.9'
 end
 ```
 
@@ -53,17 +54,17 @@ iOS показывает баннер и не запускает приложе�
 1. В Xcode выберите **File → New → Target → Notification Service Extension**. На вопрос Activate scheme нажмите **Don't Activate**. Deployment Target совпадает с приложением и не ниже iOS 13.
 2. Bundle ID extension — bundle ID приложения плюс `.PushPlatformNotificationService`. Для `com.example.app` это `com.example.app.PushPlatformNotificationService`.
 3. На target приложения и на target extension включите capability **App Groups** и одну группу `group.<bundle id приложения>.pushplatform`. Для примера выше это `group.com.example.app.pushplatform`. В имени группы нет суффикса extension.
-4. В Podfile добавьте тот же pod в target extension. Образец файла: [Sources/PushPlatformNotificationService/NotificationService.swift](Sources/PushPlatformNotificationService/NotificationService.swift).
+4. В Podfile добавьте **только** subspec Extension в target extension (не полный App SDK — иначе сборка падает на `UIApplication` в extension). Образец файла: [Sources/PushPlatformNotificationService/NotificationService.swift](Sources/PushPlatformNotificationService/NotificationService.swift).
 
 ```ruby
 target 'PushPlatformNotificationServiceExtension' do
-  pod 'PushPlatformSDK', '1.2.8'
+  pod 'PushPlatformSDK/Extension', '1.2.9'
 end
 ```
 
 ```swift
 import UserNotifications
-import PushPlatformSDK
+import PushPlatformExtension
 
 class NotificationService: UNNotificationServiceExtension {
     var contentHandler: ((UNNotificationContent) -> Void)?
@@ -190,7 +191,7 @@ PushPlatform.shared.logout { result in
 
 ### Текущий контракт (1.2.1)
 
-`initialize` принимает application id или options с `url` и `environment`. Секретный ключ для регистрации не нужен. `login(userID:metadata:)` записывает metadata в теги пользователя. `getDeviceToken()` возвращает последний hex APNs-токен или `nil`, пока система его не выдала. `preventDefault()` на показе в foreground скрывает баннер, звук и бейдж, если вызван до возврата делегата. При тапе SDK сам отправляет `PUT /notifications/{id}`, даже если приложение было закрыто; до `initialize` открытие ждёт в очереди. `notification.notificationID` — id из ответа `POST /notifications`, он не попадает в `customData`. `getSubscriptionID()` возвращает id подписки APNs после регистрации токена. Ставьте 1.2.8.
+`initialize` принимает application id или options с `url` и `environment`. Секретный ключ для регистрации не нужен. `login(userID:metadata:)` записывает metadata в теги пользователя. `getDeviceToken()` возвращает последний hex APNs-токен или `nil`, пока система его не выдала. `preventDefault()` на показе в foreground скрывает баннер, звук и бейдж, если вызван до возврата делегата. При тапе SDK сам отправляет `PUT /notifications/{id}`, даже если приложение было закрыто; до `initialize` открытие ждёт в очереди. `notification.notificationID` — id из ответа `POST /notifications`, он не попадает в `customData`. `getSubscriptionID()` возвращает id подписки APNs после регистрации токена. Ставьте 1.2.9.
 
 ### Unified application contract (1.1.0)
 

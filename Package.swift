@@ -8,6 +8,10 @@ let package = Package(
     ],
     products: [
         .library(
+            name: "PushPlatformExtension",
+            targets: ["PushPlatformExtension"]
+        ),
+        .library(
             name: "PushPlatformSDK",
             targets: ["PushPlatformSDK"]
         )
@@ -17,13 +21,18 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "PushPlatformSDK",
+            name: "PushPlatformExtension",
             dependencies: [],
+            path: "Sources/PushPlatformExtension"
+        ),
+        .target(
+            name: "PushPlatformSDK",
+            dependencies: ["PushPlatformExtension"],
             path: "Sources/PushPlatformSDK"
         ),
         .testTarget(
             name: "PushPlatformSDKTests",
-            dependencies: ["PushPlatformSDK"],
+            dependencies: ["PushPlatformSDK", "PushPlatformExtension"],
             path: "Tests/PushPlatformSDKTests"
         )
     ]
