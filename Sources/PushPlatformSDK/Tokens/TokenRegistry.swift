@@ -47,11 +47,13 @@ class TokenRegistry {
         let bundleID = Bundle.main.bundleIdentifier ?? "unknown"
         let hexToken = token.map { String(format: "%02x", $0) }.joined()
 
+        let storageEnvironment = environment.isEmpty ? "production" : environment
         let subscription = Subscription(
             provider: provider,
-            environment: environment,
+            environment: storageEnvironment,
             token: hexToken,
-            bundleID: bundleID
+            bundleID: bundleID,
+            apnsSandbox: Configuration.shared.environment == .development
         )
 
         Logger.debug("Registering \(provider) token: \(Logger.tokenMasked(token))")

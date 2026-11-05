@@ -36,7 +36,7 @@ class PushKitManager: NSObject {
         currentVoIPToken = token
 
         let environment = Configuration.shared.reportedEnvironment ?? ""
-        Logger.info("VoIP token received: \(Logger.tokenMasked(token)), environment: \(environment)")
+        Logger.info("VoIP token received: \(Logger.tokenMasked(token)), sandbox: \(Configuration.shared.environment == .development)")
 
         // Register with backend (separate subscription from APNs)
         tokenRegistry.registerToken(token, provider: "apns_voip", environment: environment)

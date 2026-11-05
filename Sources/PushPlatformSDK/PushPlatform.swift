@@ -89,7 +89,8 @@ public class PushPlatform {
     }
 
     /// Initialize with an application id and an optional server URL and environment.
-    /// A URL without an environment registers the installation as development.
+    /// Storage is always production unless an explicit legacy `environment` is passed.
+    /// APNs/VoIP sandbox comes from the provisioning profile (`Environment.automatic`), not from `url`.
     public func initialize(_ options: InitializeOptions, completion: ((Result<UUID, SDKError>) -> Void)? = nil) {
         DispatchQueue.main.async {
             if self.didStart {
@@ -105,14 +106,7 @@ public class PushPlatform {
                 return
             }
             self.didStart = true
-            let reportedEnvironment: String?
-            if let environment = options.environment {
-                reportedEnvironment = environment.rawValue
-            } else if options.url != nil {
-                reportedEnvironment = Environment.development.rawValue
-            } else {
-                reportedEnvironment = nil
-            }
+            let reportedEnvironment = options.environment?.rawValue
             self.configuration.apply(
                 baseURL: options.url ?? Configuration.defaultAPIBaseURL,
                 reportedEnvironment: reportedEnvironment,

@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'PushPlatformSDK'
-  s.version          = '1.2.10'
+  s.version          = '1.2.11'
   s.summary          = 'PushPilot iOS SDK for APNs and VoIP notifications'
   s.description      = <<-DESC
 Native iOS SDK for PushPilot push notifications.
@@ -14,7 +14,7 @@ Supports APNs, PushKit/VoIP, CallKit integration, and user management.
   s.ios.deployment_target = '13.0'
   s.swift_version = '5.5'
 
-  s.dependency 'PushPlatformExtension', '1.2.10'
+  s.dependency 'PushPlatformExtension', '1.2.11'
 
   s.source_files = 'Sources/PushPlatformSDK/**/*.swift'
   s.frameworks = 'Foundation', 'UIKit', 'UserNotifications', 'PushKit', 'CallKit', 'AVFoundation', 'Network', 'Security'
