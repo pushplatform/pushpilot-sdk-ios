@@ -106,7 +106,7 @@ class NotificationService: UNNotificationServiceExtension {
 }
 ```
 
-Extension не меняет заголовок, текст и картинку. React Native, Expo и Flutter этот target не создают. Его добавляет владелец приложения тем же способом.
+В extension — только `import PushPlatformExtension`. `import PushPlatformSDK` даёт `No such module 'PushPlatformSDK'`, потому что полный SDK в NSE не линкуется. Extension не меняет заголовок, текст и картинку. React Native, Expo и Flutter этот target не создают. Его добавляет владелец приложения тем же способом.
 
 Получите UUID приложения PushPilot. Регистрация устройства секретный ключ не отправляет. Если нужен свой сервер, передайте его в `InitializeOptions.url`; без адреса SDK использует https://api.pushpilot.ru. Не встраивайте административные ключи и секреты APNs. Замените UUID в примере на свой.
 

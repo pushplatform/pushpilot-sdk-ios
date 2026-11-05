@@ -401,6 +401,24 @@ Installation ID persists in Keychain automatically. If regenerating:
 
 ---
 
+### Issue: Notification Service Extension — No such module 'PushPlatformSDK'
+
+**Symptoms**: `NotificationService.swift` fails on `import PushPlatformSDK` with `No such module 'PushPlatformSDK'`.
+
+**Cause**: The extension target links only `PushPlatformExtension` (separate CocoaPod / SPM product). The full `PushPlatformSDK` module is for the app target, not the NSE.
+
+**Fix**:
+
+1. In `NotificationService.swift` use `import PushPlatformExtension` (not `PushPlatformSDK`).
+2. In the Podfile NSE target keep only:
+   `pod 'PushPlatformExtension', :git => '…', :tag => 'v1.2.10'` (or `'1.2.10'` when Trunk has it).
+3. Do not add `pod 'PushPlatformSDK'` to the extension target.
+4. Run `pod install`, open the `.xcworkspace`, clean and rebuild.
+
+Sample: [Sources/PushPlatformNotificationService/NotificationService.swift](../Sources/PushPlatformNotificationService/NotificationService.swift).
+
+---
+
 ### Issue: Compilation errors after SDK update
 
 **Symptoms**: Breaking changes after SDK version update.
