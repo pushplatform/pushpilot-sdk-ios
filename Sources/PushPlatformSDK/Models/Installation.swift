@@ -66,8 +66,13 @@ public struct Subscription: Codable {
         bundleID: String,
         apnsSandbox: Bool? = nil
     ) {
-        // Storage environment is production (or omitted). Sandbox is the APNs flag.
-        self.apnsSandbox = apnsSandbox ?? (Configuration.shared.environment == .development)
+        // Storage environment is production (or omitted). Sandbox is an explicit transport flag.
+        // Legacy callers that still pass environment "development" keep sandbox=true.
+        if let apnsSandbox {
+            self.apnsSandbox = apnsSandbox
+        } else {
+            self.apnsSandbox = environment == "development"
+        }
         self.provider = provider
         self.environment = environment.isEmpty ? "production" : environment
         self.token = token
