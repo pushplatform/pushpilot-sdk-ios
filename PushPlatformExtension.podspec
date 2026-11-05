@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'PushPlatformExtension'
-  s.version          = '1.2.10'
+  s.version          = '1.2.11'
   s.summary          = 'PushPilot Notification Service Extension helpers'
   s.description      = <<-DESC
 Extension-safe PushPilot helpers for confirming notification delivery from a

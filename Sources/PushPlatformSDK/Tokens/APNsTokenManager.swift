@@ -23,8 +23,9 @@ class APNsTokenManager {
 
         currentToken = token
 
+        // Omit legacy storage env so the server stores production; sandbox is separate.
         let environment = Configuration.shared.reportedEnvironment ?? ""
-        Logger.info("APNs token received: \(Logger.tokenMasked(token)), environment: \(environment)")
+        Logger.info("APNs token received: \(Logger.tokenMasked(token)), sandbox: \(Configuration.shared.environment == .development)")
 
         // Register with backend
         tokenRegistry.registerToken(token, provider: "apns", environment: environment)

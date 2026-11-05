@@ -63,11 +63,13 @@ public struct Subscription: Codable {
         provider: String,
         environment: String,
         token: String,
-        bundleID: String
+        bundleID: String,
+        apnsSandbox: Bool? = nil
     ) {
-        self.apnsSandbox = environment == "development"
+        // Storage environment is production (or omitted). Sandbox is the APNs flag.
+        self.apnsSandbox = apnsSandbox ?? (Configuration.shared.environment == .development)
         self.provider = provider
-        self.environment = environment
+        self.environment = environment.isEmpty ? "production" : environment
         self.token = token
         self.bundleID = bundleID
     }

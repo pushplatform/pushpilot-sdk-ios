@@ -1,3 +1,7 @@
+# 1.2.11 — 2026-11-05
+
+- Один режим storage: `url` больше не регистрирует installation как `development`. Storage — production (или omit); `apns_sandbox` / VoIP sandbox — из provisioning (`Environment.automatic`). Чинит universal `ios_badgeType Increase` при локальном API url.
+
 # 1.2.10 — 2026-11-04
 
 - CocoaPods: отдельный pod `PushPlatformExtension` вместо subspec `PushPlatformSDK/Extension`. App зависит от Extension как от настоящего модуля — static `use_frameworks!` больше не ломает `import PushPlatformExtension`. NSE: `pod 'PushPlatformExtension'`. Пока Trunk read-only, в Podfile pin’ьте оба пода с одного git-тега `v1.2.10`.

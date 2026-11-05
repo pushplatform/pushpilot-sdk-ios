@@ -44,7 +44,12 @@ class Configuration {
     func apply(baseURL: String, reportedEnvironment: String?, debugMode: Bool, foregroundBannerFallback: TimeInterval = 0) {
         serverURL = baseURL
         self.reportedEnvironment = reportedEnvironment
-        environment = Environment(rawValue: reportedEnvironment ?? "") ?? .production
+        // Explicit legacy storage env still drives APNs sandbox; otherwise use the profile.
+        if let reportedEnvironment, let explicit = Environment(rawValue: reportedEnvironment) {
+            environment = explicit
+        } else {
+            environment = .automatic
+        }
         self.debugMode = debugMode
         self.foregroundBannerFallback = foregroundBannerFallback
         isConfigured = true
