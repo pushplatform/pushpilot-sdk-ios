@@ -236,14 +236,11 @@ Check entitlements file includes:
 
 **Problem**: Apple requires CallKit for VoIP push since iOS 13.
 
-**Solution**: SDK handles CallKit automatically. Verify `didReceiveIncomingCall` is implemented:
-
-```swift
-func didReceiveIncomingCall(callID: String, callerName: String, metadata: [String: Any]) {
-    print("Incoming call from \(callerName)")
-    // CallKit UI shown automatically by SDK
-}
-```
+**Solution**: Configure the application's native CallKit provider and opt in to
+VoIP using `startVoIPNotifications(handler:)`, or forward the token and payload from
+the existing PushKit registry. Report the call to CallKit natively before completing
+the PushKit callback. Do not wait for JavaScript, Dart or WebSocket startup.
+See [MIGRATION_2.md](MIGRATION_2.md).
 
 #### 4. Testing in Wrong Environment
 

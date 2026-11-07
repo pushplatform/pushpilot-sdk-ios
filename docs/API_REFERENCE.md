@@ -431,34 +431,20 @@ func didOpenNotification(_ notification: Notification, action: String?, context:
 
 ---
 
-#### `didReceiveIncomingCall(callID:callerName:metadata:)`
+#### Native VoIP transport
 
-VoIP push received - incoming call.
+`initialize` регистрирует APNs. Для VoIP приложение использует один PushKit registry
+и один CallKit provider.
 
-```swift
-func didReceiveIncomingCall(callID: String, callerName: String, metadata: [String: Any])
-```
+- `registerVoIPToken(_ token: Data)` регистрирует токен существующего PushKit registry.
+- `handleVoIPNotification(_ payload: [AnyHashable: Any])` подтверждает получение VoIP push.
+- `startVoIPNotifications(handler:)` создаёт PushKit registry с нативным обработчиком приложения.
 
-**Parameters**:
-- `callID`: Unique call identifier
-- `callerName`: Caller display name
-- `metadata`: Additional call data
+Обработчик сообщает входящий вызов существующему `CXProvider` и вызывает completion
+после ответа `reportNewIncomingCall`. Ответ, завершение и аудиосессия принадлежат
+приложению. Делегат обычных уведомлений не заменяет этот обработчик.
 
-**Example**:
-```swift
-func didReceiveIncomingCall(callID: String, callerName: String, metadata: [String: Any]) {
-    // CallKit UI shown automatically
-    // Prepare call connection
-    if let callType = metadata["type"] as? String {
-        setupCall(id: callID, type: callType)
-    }
-}
-```
-
-**Notes**:
-- CallKit UI is shown automatically
-- Called even when app is terminated
-- Must complete quickly (< 10 seconds)
+Полная последовательность подключения: [MIGRATION_2.md](MIGRATION_2.md).
 
 ---
 

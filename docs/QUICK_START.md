@@ -199,14 +199,6 @@ extension AppDelegate: PushPlatformDelegate {
         }
     }
     
-    // Incoming VoIP call
-    func didReceiveIncomingCall(callID: String, callerName: String, metadata: [String: Any]) {
-        print("📞 Incoming call from \(callerName)")
-        print("   Call ID: \(callID)")
-        
-        // CallKit UI will be shown automatically
-    }
-    
     // APNs token updated
     func didUpdateAPNsToken() {
         print("🔄 APNs token updated")
@@ -366,7 +358,9 @@ You can display this in your app's settings or debug screen for testing.
 **Solutions**:
 - Verify PushKit entitlement is enabled
 - Check VoIP certificate configured in backend
-- Implement CallKit integration (SDK handles this automatically)
+- Configure the native VoIP handler or forward your existing PushKit token and payload.
+- Report the incoming call through the application-owned CallKit provider before completing PushKit.
+- Follow [the VoIP integration guide](MIGRATION_2.md).
 - Test with sandbox environment first
 
 ### Duplicate notifications
