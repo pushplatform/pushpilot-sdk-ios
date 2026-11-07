@@ -109,7 +109,7 @@ struct InstallationRegistration: Encodable {
     let appVersion: String?
     let deviceModel: String
     let platform = "ios"
-    let sdkVersion = "2.0.0"
+    let sdkVersion = "2.0.1"
     var deviceKind: String = DeviceMetadata.kind
     var locale: String = Locale.current.identifier
     var timezone: String = TimeZone.current.identifier

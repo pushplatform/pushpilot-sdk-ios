@@ -1,7 +1,5 @@
 # Переход на PushPilot 2.0
 
-Статус: локальный кандидат. Публичные релизы и git-теги 2.0.0 ещё не созданы.
-
 ## Обычные уведомления
 
 Инициализация SDK регистрирует обычный APNs/FCM транспорт. Секретный ключ
@@ -59,15 +57,23 @@ Flutter `registerForVoIP()` проверяет наличие нативной �
 Телефон должен разрешать уведомления, а полноэкранные звонки требуют отдельных
 Android permissions и системного calling API приложения.
 
-## Установка и проверка
+## Установка
 
-Native SDK и wrapper должны использовать одну версию 2.0.0. React Native tarball
-содержит native/ios и native/android/maven; Podfile должен ссылаться на bundled
-native/ios, а Gradle — на bundled Maven. Исходники других локальных проектов и
-mavenLocal для установки пакета не нужны. Локальный кандидат упаковывается только
-после build + release:check; публичная публикация рабочего дерева запрещена.
-Flutter-кандидат пока проверяется с path dependency и локальными native SDK 2.0.0;
-публичная установка зависит от выпуска этих native SDK.
+Мобильные SDK и обёртки используют версию 2.0.1.
+
+- React Native: `npm install @pushplatform/react-native@2.0.1`.
+- Flutter: `flutter pub add push_platform_flutter:^2.0.1`.
+- Android: `implementation("com.pushplatform:sdk-android:2.0.1")`.
+- iOS: Swift Package Manager с версией 2.0.1 или CocoaPods с git-тегом `v2.0.1`.
+
+React Native подключает нативные SDK из своего npm-пакета. Flutter подключает
+Android SDK из публичного Maven-репозитория и iOS SDK через CocoaPods.
+В Podfile Flutter-проекта подключите оба pod с одним тегом:
+
+```ruby
+pod 'PushPlatformExtension', :git => 'https://github.com/pushplatform/pushpilot-sdk-ios.git', :tag => 'v2.0.1'
+pod 'PushPlatformSDK', :git => 'https://github.com/pushplatform/pushpilot-sdk-ios.git', :tag => 'v2.0.1'
+```
 
 Проверяйте alert, открытие, badge, входящий звонок, answer, двустороннее аудио,
 отмену, decline, expiry и повторную доставку на физических устройствах: foreground,

@@ -1,5 +1,9 @@
 # 1.2.11 — 2026-11-05
 
+## 2.0.1
+
+Align package/native dependency versions, installation instructions and production integration documentation.
+
 - Один режим storage: `url` больше не регистрирует installation как `development`. Storage — production (или omit); `apns_sandbox` / VoIP sandbox — из provisioning (`Environment.automatic`). Чинит universal `ios_badgeType Increase` при локальном API url.
 
 # 1.2.10 — 2026-11-04
