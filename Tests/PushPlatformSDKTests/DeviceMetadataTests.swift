@@ -17,7 +17,7 @@ final class DeviceMetadataTests: XCTestCase {
         XCTAssertEqual(body["timezone"] as? String, TimeZone.current.identifier)
         XCTAssertEqual(body["notification_permission"] as? String, "granted")
         XCTAssertEqual(body["device_model"] as? String, "iPhone 11")
-        XCTAssertEqual(body["sdk_version"] as? String, "1.1.0")
+        XCTAssertEqual(body["sdk_version"] as? String, "2.0.0")
     }
 
     func testPermissionStatesDoNotInventAuthorization() {

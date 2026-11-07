@@ -3,6 +3,8 @@ import Foundation
 /// Sends PUT /notifications/{id} when the user taps a notification. A tap that
 /// arrives before initialize, or before the subscription id is known, waits here.
 final class NotificationOpenReporter {
+    enum Kind { case opened, received }
+    private let kind: Kind
     private let apiClient: APIClient
     private let subscriptionID: () -> String?
     private let queue = DispatchQueue(label: "com.pushplatform.sdk.notification-opens")
@@ -10,7 +12,8 @@ final class NotificationOpenReporter {
     private var pending: [String] = []
     private var applicationID: UUID?
 
-    init(apiClient: APIClient = APIClient(), subscriptionID: @escaping () -> String?) {
+    init(apiClient: APIClient = APIClient(), kind: Kind = .opened, subscriptionID: @escaping () -> String?) {
+        self.kind = kind
         self.apiClient = apiClient
         self.subscriptionID = subscriptionID
     }
@@ -52,13 +55,20 @@ final class NotificationOpenReporter {
         let ids = pending
         pending.removeAll()
         for id in ids {
-            apiClient.reportOpen(notificationID: id, applicationID: applicationID, subscriptionID: subscriptionID) { [weak self] result in
+            let finished: (Result<Void, SDKError>) -> Void = { [weak self] result in
                 guard case .failure(let error) = result else { return }
-                Logger.warning("Notification open was not recorded: \(error)")
-                // Repeated opens are not counted twice, so a network failure is retried.
-                if case .networkError = error {
-                    self?.queue.async { self?.enqueue(id) }
+                Logger.warning("Notification event was not recorded: \(error)")
+                let retryable: Bool
+                switch error {
+                case .networkError: retryable = true
+                case .apiError(let code, _): retryable = code == 429 || code >= 500
+                default: retryable = false
                 }
+                if retryable { self?.queue.async { self?.enqueue(id) } }
+            }
+            switch kind {
+            case .opened: apiClient.reportOpen(notificationID: id, applicationID: applicationID, subscriptionID: subscriptionID, completion: finished)
+            case .received: apiClient.reportReceived(notificationID: id, applicationID: applicationID, subscriptionID: subscriptionID, completion: finished)
             }
         }
     }

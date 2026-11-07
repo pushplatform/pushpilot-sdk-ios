@@ -142,7 +142,7 @@ final class APNsTokenManagerTests: XCTestCase {
         }
 
         // When
-        mockTokenRegistry.delegate?.didRegisterToken(provider: "apns")
+        mockTokenRegistry.delegate(for: "apns")?.didRegisterToken(provider: "apns")
 
         // Then
         waitForExpectations(timeout: 1.0)
@@ -158,7 +158,7 @@ final class APNsTokenManagerTests: XCTestCase {
 
         // When
         let sdkError = SDKError.networkError(underlying: NSError(domain: "Test", code: -1))
-        mockTokenRegistry.delegate?.didFailToRegisterToken(provider: "apns", error: sdkError)
+        mockTokenRegistry.delegate(for: "apns")?.didFailToRegisterToken(provider: "apns", error: sdkError)
 
         // Then
         waitForExpectations(timeout: 1.0)
@@ -171,7 +171,7 @@ final class APNsTokenManagerTests: XCTestCase {
         }
 
         // When
-        mockTokenRegistry.delegate?.didRegisterToken(provider: "apns_voip")
+        mockTokenRegistry.delegate(for: "apns")?.didRegisterToken(provider: "apns_voip")
 
         // Then: Should not trigger delegate callback
         let expectation = self.expectation(description: "Wait")

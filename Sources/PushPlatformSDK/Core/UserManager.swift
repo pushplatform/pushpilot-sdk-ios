@@ -1,154 +1,107 @@
 import Foundation
 
-/// Manages user login/logout and external user ID association
+/// Serializes account changes so a late login/retry can never overwrite a newer logout.
 class UserManager {
     private let apiClient: APIClient
     private let installationManager: InstallationManagerProtocol
-    private var retryAttempt = 0
-    private let maxRetries = 5
+    private struct Operation {
+        let id = UUID()
+        let userID: String?
+        let metadata: [String: Any]?
+        var completion: ((Result<Void, SDKError>) -> Void)?
+        var attempt = 0
+    }
+    private var desired: Operation?
+    private var inFlight = false
+    private var inFlightID: UUID?
+    private var retry: DispatchWorkItem?
 
     init(apiClient: APIClient, installationManager: InstallationManagerProtocol = InstallationManager.shared) {
         self.apiClient = apiClient
         self.installationManager = installationManager
     }
 
-    // MARK: - Login
-
-    /// Associate installation with external user ID
-    /// - Parameters:
-    ///   - userID: External user identifier
-    ///   - completion: Result callback
     func login(userID: String, metadata: [String: Any]? = nil, completion: @escaping (Result<Void, SDKError>) -> Void) {
-        guard let installationID = installationManager.getInstallationID() else {
-            Logger.error("Cannot login: installation ID not initialized")
-            completion(.failure(.notConfigured))
-            return
-        }
-
-        Logger.info("User login: external_user_id=\(userID)")
-        retryAttempt = 0
-        performLogin(installationID: installationID, externalUserID: userID, metadata: metadata, completion: completion)
+        enqueue(userID: userID, metadata: metadata, completion: completion)
     }
 
-    // MARK: - Logout
-
-    /// Dissociate user from installation
-    /// - Parameter completion: Result callback
     func logout(completion: @escaping (Result<Void, SDKError>) -> Void) {
-        guard let installationID = installationManager.getInstallationID() else {
-            Logger.error("Cannot logout: installation ID not initialized")
-            completion(.failure(.notConfigured))
-            return
-        }
-
-        Logger.info("User logout")
-        retryAttempt = 0
-        performLogout(installationID: installationID, completion: completion)
+        enqueue(userID: nil, metadata: nil, completion: completion)
     }
 
-    // MARK: - Private
+    private func enqueue(userID: String?, metadata: [String: Any]?, completion: @escaping (Result<Void, SDKError>) -> Void) {
+        onMain { [self] in
+            guard installationManager.getInstallationID() != nil else { completion(.failure(.notConfigured)); return }
+            let previous = desired
+            retry?.cancel()
+            retry = nil
+            desired = Operation(userID: userID, metadata: metadata, completion: completion)
+            if previous?.id != inFlightID { previous?.completion?(.failure(.apiError(statusCode: 409, message: "Account operation superseded"))) }
+            send()
+        }
+    }
 
-    private func performLogin(
-        installationID: UUID,
-        externalUserID: String,
-        metadata: [String: Any]?,
-        completion: @escaping (Result<Void, SDKError>) -> Void
-    ) {
-        apiClient.loginUser(installationID: installationID, externalUserID: externalUserID, metadata: metadata) { [weak self] result in
-            guard let self = self else { return }
+    func retryPending() {
+        onMain { [self] in
+            guard !inFlight, var operation = desired else { return }
+            retry?.cancel()
+            operation.attempt = 0
+            desired = operation
+            send()
+        }
+    }
 
-            switch result {
-            case .success:
-                Logger.info("Login successful: external_user_id=\(externalUserID)")
-                self.retryAttempt = 0
-                completion(.success(()))
-
-            case .failure(let error):
-                if self.shouldRetry(error) {
-                    self.scheduleLoginRetry(installationID: installationID, externalUserID: externalUserID, metadata: metadata, completion: completion)
-                } else {
-                    Logger.error("Login failed permanently: \(error)")
-                    completion(.failure(error))
+    private func send() {
+        guard !inFlight, let operation = desired, let installationID = installationManager.getInstallationID() else { return }
+        inFlight = true
+        inFlightID = operation.id
+        let finished: (Result<Void, SDKError>) -> Void = { [weak self] result in
+            self?.onMain {
+                guard let self else { return }
+                self.inFlight = false
+                self.inFlightID = nil
+                guard var latest = self.desired, latest.id == operation.id else {
+                    operation.completion?(.failure(.apiError(statusCode: 409, message: "Account operation superseded")))
+                    self.send()
+                    return
+                }
+                switch result {
+                case .success:
+                    self.desired = nil
+                    latest.completion?(.success(()))
+                case .failure(let error):
+                    if self.isRetryable(error), latest.attempt < 5 {
+                        let delay = pow(2.0, Double(latest.attempt))
+                        latest.attempt += 1
+                        self.desired = latest
+                        let item = DispatchWorkItem { [weak self] in
+                            guard self?.desired?.id == operation.id else { return }
+                            self?.send()
+                        }
+                        self.retry = item
+                        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: item)
+                    } else {
+                        let callback = latest.completion
+                        latest.completion = nil
+                        self.desired = self.isRetryable(error) ? latest : nil
+                        callback?(.failure(error))
+                    }
                 }
             }
         }
+        if let userID = operation.userID {
+            apiClient.loginUser(installationID: installationID, externalUserID: userID, metadata: operation.metadata, completion: finished)
+        } else { apiClient.logoutUser(installationID: installationID, completion: finished) }
     }
 
-    private func performLogout(
-        installationID: UUID,
-        completion: @escaping (Result<Void, SDKError>) -> Void
-    ) {
-        apiClient.logoutUser(installationID: installationID) { [weak self] result in
-            guard let self = self else { return }
-
-            switch result {
-            case .success:
-                Logger.info("Logout successful")
-                self.retryAttempt = 0
-                completion(.success(()))
-
-            case .failure(let error):
-                if self.shouldRetry(error) {
-                    self.scheduleLogoutRetry(installationID: installationID, completion: completion)
-                } else {
-                    Logger.error("Logout failed permanently: \(error)")
-                    completion(.failure(error))
-                }
-            }
-        }
-    }
-
-    private func shouldRetry(_ error: SDKError) -> Bool {
+    private func isRetryable(_ error: SDKError) -> Bool {
         switch error {
-        case .networkError:
-            return true
-        case .apiError(let statusCode, _):
-            // Retry on 5xx server errors and 429 rate limit
-            return statusCode >= 500 || statusCode == 429
-        default:
-            return false
+        case .networkError: return true
+        case .apiError(let status, _): return status >= 500 || status == 429
+        default: return false
         }
     }
-
-    private func scheduleLoginRetry(
-        installationID: UUID,
-        externalUserID: String,
-        metadata: [String: Any]?,
-        completion: @escaping (Result<Void, SDKError>) -> Void
-    ) {
-        guard retryAttempt < maxRetries else {
-            Logger.error("Login max retries exceeded")
-            completion(.failure(.maxRetriesExceeded))
-            return
-        }
-
-        let delay = min(pow(2.0, Double(retryAttempt)), 60.0)
-        retryAttempt += 1
-
-        Logger.debug("Retrying login in \(delay)s (attempt \(retryAttempt)/\(maxRetries))")
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
-            self?.performLogin(installationID: installationID, externalUserID: externalUserID, metadata: metadata, completion: completion)
-        }
-    }
-
-    private func scheduleLogoutRetry(
-        installationID: UUID,
-        completion: @escaping (Result<Void, SDKError>) -> Void
-    ) {
-        guard retryAttempt < maxRetries else {
-            Logger.error("Logout max retries exceeded")
-            completion(.failure(.maxRetriesExceeded))
-            return
-        }
-
-        let delay = min(pow(2.0, Double(retryAttempt)), 60.0)
-        retryAttempt += 1
-
-        Logger.debug("Retrying logout in \(delay)s (attempt \(retryAttempt)/\(maxRetries))")
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
-            self?.performLogout(installationID: installationID, completion: completion)
-        }
+    private func onMain(_ work: @escaping () -> Void) {
+        if Thread.isMainThread { work() } else { DispatchQueue.main.async(execute: work) }
     }
 }

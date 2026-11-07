@@ -30,6 +30,7 @@ public enum AppGroupStore {
 
     private static func defaults() -> UserDefaults? {
         guard let bundleID = Bundle.main.bundleIdentifier else { return nil }
-        return UserDefaults(suiteName: identifier(bundleID: bundleID))
+        let group = Bundle.main.object(forInfoDictionaryKey: "PushPlatformAppGroup") as? String ?? identifier(bundleID: bundleID)
+        return UserDefaults(suiteName: group)
     }
 }

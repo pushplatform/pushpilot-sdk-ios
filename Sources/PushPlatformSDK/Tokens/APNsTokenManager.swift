@@ -9,7 +9,7 @@ class APNsTokenManager {
 
     init(tokenRegistry: TokenRegistry) {
         self.tokenRegistry = tokenRegistry
-        self.tokenRegistry.delegate = self
+        self.tokenRegistry.setDelegate(self, for: "apns")
     }
 
     /// Handle APNs token registration
