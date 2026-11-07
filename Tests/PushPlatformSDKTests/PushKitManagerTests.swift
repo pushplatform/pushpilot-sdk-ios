@@ -13,7 +13,7 @@ final class PushKitManagerTests: XCTestCase {
         mockInstallationManager = MockInstallationManager()
         mockInstallationManager.installationID = UUID()
         mockTokenRegistry = MockTokenRegistry(installationManager: mockInstallationManager)
-        pushKitManager = PushKitManager(tokenRegistry: mockTokenRegistry)
+        pushKitManager = PushKitManager(tokenRegistry: mockTokenRegistry, incomingPushHandler: { _, completion in completion() })
         mockDelegate = MockPushKitManagerDelegate()
         pushKitManager.delegate = mockDelegate
 
@@ -143,7 +143,7 @@ final class PushKitManagerTests: XCTestCase {
         }
 
         // When
-        mockTokenRegistry.delegate?.didRegisterToken(provider: "apns_voip")
+        mockTokenRegistry.delegate(for: "apns_voip")?.didRegisterToken(provider: "apns_voip")
 
         // Then
         waitForExpectations(timeout: 1.0)
@@ -159,7 +159,7 @@ final class PushKitManagerTests: XCTestCase {
 
         // When
         let sdkError = SDKError.networkError(underlying: NSError(domain: "Test", code: -1))
-        mockTokenRegistry.delegate?.didFailToRegisterToken(provider: "apns_voip", error: sdkError)
+        mockTokenRegistry.delegate(for: "apns_voip")?.didFailToRegisterToken(provider: "apns_voip", error: sdkError)
 
         // Then
         waitForExpectations(timeout: 1.0)
@@ -172,7 +172,7 @@ final class PushKitManagerTests: XCTestCase {
         }
 
         // When
-        mockTokenRegistry.delegate?.didRegisterToken(provider: "apns")
+        mockTokenRegistry.delegate(for: "apns_voip")?.didRegisterToken(provider: "apns")
 
         // Then: Should not trigger delegate callback
         let expectation = self.expectation(description: "Wait")

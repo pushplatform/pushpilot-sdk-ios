@@ -5,23 +5,26 @@ import PushKit
 class PushKitManager: NSObject {
     private let tokenRegistry: TokenRegistry
     private let pushRegistry: PKPushRegistry
-    private let callKitIntegration: CallKitIntegration
+    private let incomingPushHandler: ([AnyHashable: Any], @escaping () -> Void) -> Void
     private var currentVoIPToken: Data?
 
     weak var delegate: PushKitManagerDelegate?
 
-    init(tokenRegistry: TokenRegistry, callKitIntegration: CallKitIntegration = CallKitIntegration()) {
+    init(tokenRegistry: TokenRegistry, incomingPushHandler: @escaping ([AnyHashable: Any], @escaping () -> Void) -> Void) {
         self.tokenRegistry = tokenRegistry
         self.pushRegistry = PKPushRegistry(queue: .main)
-        self.callKitIntegration = callKitIntegration
+        self.incomingPushHandler = incomingPushHandler
         super.init()
 
         // Set delegate and register for VoIP push
         pushRegistry.delegate = self
         pushRegistry.desiredPushTypes = [.voIP]
 
-        self.tokenRegistry.delegate = self
-        self.callKitIntegration.delegate = self
+        self.tokenRegistry.setDelegate(self, for: "apns_voip")
+    }
+
+    func handleIncomingPush(_ payload: [AnyHashable: Any], completion: @escaping () -> Void) {
+        incomingPushHandler(payload, completion)
     }
 
     /// Handle VoIP token registration
@@ -64,7 +67,7 @@ extension PushKitManager: PKPushRegistryDelegate {
         Logger.info("VoIP push received, delegating to CallKit")
 
         // Handle via CallKit integration
-        callKitIntegration.handleIncomingVoIPPush(payload: payload.dictionaryPayload, completion: completion)
+        handleIncomingPush(payload.dictionaryPayload, completion: completion)
     }
 
     func pushRegistry(_ registry: PKPushRegistry, didInvalidatePushTokenFor type: PKPushType) {
@@ -87,15 +90,6 @@ extension PushKitManager: TokenRegistryDelegate {
     func didFailToRegisterToken(provider: String, error: SDKError) {
         guard provider == "apns_voip" else { return }
         delegate?.didFailToRegisterVoIPToken(error: error)
-    }
-}
-
-// MARK: - CallKitIntegrationDelegate
-
-extension PushKitManager: CallKitIntegrationDelegate {
-    func didReceiveIncomingCall(callID: String, callerName: String, metadata: [String: Any]) {
-        // Forward to app delegate
-        delegate?.didReceiveIncomingCall(callID: callID, callerName: callerName, metadata: metadata)
     }
 }
 

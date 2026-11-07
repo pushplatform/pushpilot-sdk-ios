@@ -9,6 +9,7 @@ enum RemoteNotificationIntegration {
     private static var didInstall = false
     static var registerIMP: IMP?
     static var failIMP: IMP?
+    static var backgroundIMP: IMP?
 
     static func install() {
         if Bundle.main.bundleURL.path.contains("/Agents") { return }
@@ -28,6 +29,12 @@ enum RemoteNotificationIntegration {
             #selector(RemoteNotificationHook.application(_:didFailToRegisterForRemoteNotificationsWithError:)),
             store: { failIMP = $0 }
         )
+        hook(
+            cls,
+            #selector(UIApplicationDelegate.application(_:didReceiveRemoteNotification:fetchCompletionHandler:)),
+            #selector(RemoteNotificationHook.application(_:didReceiveRemoteNotification:fetchCompletionHandler:)),
+            store: { backgroundIMP = $0 }
+        )
         UIApplication.shared.registerForRemoteNotifications()
     }
 
@@ -37,7 +44,7 @@ enum RemoteNotificationIntegration {
         let types = method_getTypeEncoding(method)
         if let existing = class_getInstanceMethod(cls, selector) {
             store(method_getImplementation(existing))
-            method_setImplementation(existing, implementation)
+            class_replaceMethod(cls, selector, implementation, types)
             return
         }
         store(nil)
@@ -57,6 +64,20 @@ private final class RemoteNotificationHook: NSObject {
         )
     }
 
+    @objc func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable: Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
+        let handled = PushPlatform.shared.handleBackgroundNotification(userInfo)
+        guard let imp = RemoteNotificationIntegration.backgroundIMP else {
+            completionHandler(handled ? .newData : .noData)
+            return
+        }
+        typealias Callback = @convention(block) (UIBackgroundFetchResult) -> Void
+        unsafeBitCast(imp, to: (@convention(c) (AnyObject, Selector, UIApplication, NSDictionary, Callback) -> Void).self)(
+            self,
+            #selector(UIApplicationDelegate.application(_:didReceiveRemoteNotification:fetchCompletionHandler:)),
+            application, userInfo as NSDictionary, completionHandler
+        )
+    }
+
     @objc func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
         PushPlatform.shared.didFailToRegisterAPNs(error)
         guard let imp = RemoteNotificationIntegration.failIMP else { return }
@@ -72,15 +93,28 @@ private final class RemoteNotificationHook: NSObject {
 final class NotificationCenterProxy: NSObject, UNUserNotificationCenterDelegate {
     static let shared = NotificationCenterProxy()
 
+    private weak var hostDelegate: UNUserNotificationCenterDelegate?
+
     func install() {
-        UNUserNotificationCenter.current().delegate = self
+        let center = UNUserNotificationCenter.current()
+        guard center.delegate !== self else { return }
+        hostDelegate = center.delegate
+        center.delegate = self
     }
 
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-        PushPlatform.shared.handleForegroundNotification(notification, completionHandler: completionHandler)
+        if notification.request.content.userInfo[NotificationParser.notificationIDKey] is String {
+            PushPlatform.shared.handleForegroundNotification(notification, completionHandler: completionHandler)
+        } else if let hostDelegate, hostDelegate.responds(to: #selector(UNUserNotificationCenterDelegate.userNotificationCenter(_:willPresent:withCompletionHandler:))) {
+            hostDelegate.userNotificationCenter?(center, willPresent: notification, withCompletionHandler: completionHandler)
+        } else { completionHandler([.alert, .sound, .badge]) }
     }
 
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
-        PushPlatform.shared.handleNotificationResponse(response, completionHandler: completionHandler)
+        if response.notification.request.content.userInfo[NotificationParser.notificationIDKey] is String {
+            PushPlatform.shared.handleNotificationResponse(response, completionHandler: completionHandler)
+        } else if let hostDelegate, hostDelegate.responds(to: #selector(UNUserNotificationCenterDelegate.userNotificationCenter(_:didReceive:withCompletionHandler:))) {
+            hostDelegate.userNotificationCenter?(center, didReceive: response, withCompletionHandler: completionHandler)
+        } else { completionHandler() }
     }
 }

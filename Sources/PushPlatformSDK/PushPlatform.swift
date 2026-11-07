@@ -12,19 +12,32 @@ public class PushPlatform {
     private let tokenRegistry = TokenRegistry()
     private let deduplicationCache = DeduplicationCache()
     private let openReporter = NotificationOpenReporter(subscriptionID: { SecureStorage().getSubscriptionID() })
+    private let receivedReporter = NotificationOpenReporter(kind: .received, subscriptionID: { SecureStorage().getSubscriptionID() })
+    private lazy var voipReceivedReporter = NotificationOpenReporter(kind: .received, subscriptionID: { [weak self] in self?.tokenRegistry.subscriptionID(for: "apns_voip") })
     private var apnsTokenManager: APNsTokenManager?
     private var pushKitManager: PushKitManager?
     private var userManager: UserManager?
     private var notificationDelegate: NotificationDelegate?
     private var applicationID: UUID?
     private var activityObserver: NSObjectProtocol?
+    private var initializationInProgress = false
+    private var initializationCallbacks: [((Result<UUID, SDKError>) -> Void)] = []
+    private var pendingAPNsToken: Data?
+    private var externalVoIPToken: Data?
+    private var lastOptions: InitializeOptions?
+    private let registrationReachability = Reachability()
 
     private init() {
         activityObserver = NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
             RemoteNotificationIntegration.install()
             self?.refreshMetadata()
             self?.openReporter.flush()
+            self?.receivedReporter.flush()
+            self?.voipReceivedReporter.flush()
             self?.clearBadgeAndReportSession()
+            self?.retryInitialization()
+            self?.tokenRegistry.flushPendingRegistrations()
+            self?.userManager?.retryPending()
         }
         // A tap that launched the app is delivered only to a delegate set during launch.
         if Thread.isMainThread {
@@ -39,13 +52,19 @@ public class PushPlatform {
             openReporter.flush()
         }
 
+        tokenRegistry.onProviderRegistered = { [weak self] _ in
+            self?.receivedReporter.flush()
+            self?.voipReceivedReporter.flush()
+        }
+
         // Initialize APNs token manager
         apnsTokenManager = APNsTokenManager(tokenRegistry: tokenRegistry)
         apnsTokenManager?.delegate = self
 
-        // Initialize PushKit manager
-        pushKitManager = PushKitManager(tokenRegistry: tokenRegistry)
-        pushKitManager?.delegate = self
+        // PushKit is opt-in. Applications with CallKit/CallKeep keep their own registry.
+        registrationReachability.startMonitoring { [weak self] in self?.retryInitialization(); self?.userManager?.retryPending() }
+
+        tokenRegistry.setDelegate(self, for: "apns_voip")
 
         // Initialize user manager
         userManager = UserManager(apiClient: apiClient)
@@ -55,11 +74,15 @@ public class PushPlatform {
             notificationDelegate = NotificationDelegate(deduplicationCache: deduplicationCache)
             notificationDelegate?.appDelegate = nil  // Set via delegate property
             notificationDelegate?.onOpen = { [openReporter] id in openReporter.report(id) }
-            notificationDelegate?.onReceive = { parsed in
+            notificationDelegate?.onReceive = { [weak self] parsed in
+                if let id = parsed.notificationID { self?.receivedReporter.report(id) }
                 if let revision = parsed.badgeRevision { AppGroupStore.saveRevision(revision) }
             }
         }
     }
+
+    public var serverURL: String { configuration.serverURL }
+    public var isVoIPConfigured: Bool { pushKitManager != nil || externalVoIPToken != nil }
 
     // MARK: - Configuration
 
@@ -93,8 +116,13 @@ public class PushPlatform {
     /// APNs/VoIP sandbox comes from the provisioning profile (`Environment.automatic`), not from `url`.
     public func initialize(_ options: InitializeOptions, completion: ((Result<UUID, SDKError>) -> Void)? = nil) {
         DispatchQueue.main.async {
-            if self.didStart {
-                completion?(.success(self.installationManager.getInstallationID() ?? UUID(uuidString: options.applicationId) ?? UUID()))
+            if let previous = self.lastOptions,
+               previous.applicationId != options.applicationId || (previous.url ?? Configuration.defaultAPIBaseURL) != (options.url ?? Configuration.defaultAPIBaseURL) || previous.environment != options.environment {
+                completion?(.failure(.apiError(statusCode: 409, message: "SDK is already configured for a different application or server")))
+                return
+            }
+            if self.didStart, let id = self.installationManager.getInstallationID() {
+                completion?(.success(id))
                 return
             }
             guard let appID = UUID(uuidString: options.applicationId) else {
@@ -105,7 +133,10 @@ public class PushPlatform {
                 completion?(.failure(.apiError(statusCode: 400, message: "foregroundBannerFallback must be a non-negative number of seconds")))
                 return
             }
-            self.didStart = true
+            if let completion { self.initializationCallbacks.append(completion) }
+            guard !self.initializationInProgress else { return }
+            self.initializationInProgress = true
+            self.lastOptions = options
             let reportedEnvironment = options.environment?.rawValue
             self.configuration.apply(
                 baseURL: options.url ?? Configuration.defaultAPIBaseURL,
@@ -114,7 +145,7 @@ public class PushPlatform {
                 foregroundBannerFallback: options.foregroundBannerFallback
             )
             RemoteNotificationIntegration.install()
-            self.begin(applicationID: appID, reportedEnvironment: reportedEnvironment ?? "", completion: completion)
+            self.begin(applicationID: appID, reportedEnvironment: reportedEnvironment ?? "", completion: nil)
         }
     }
 
@@ -126,6 +157,8 @@ public class PushPlatform {
             self.installationManager.beginRegistration()
             self.applicationID = applicationID
             self.openReporter.start(applicationID: applicationID)
+            self.receivedReporter.start(applicationID: applicationID)
+            self.voipReceivedReporter.start(applicationID: applicationID)
             AppGroupStore.save(serverURL: self.configuration.serverURL, applicationID: applicationID, subscriptionID: SecureStorage().getSubscriptionID())
             self.clearBadgeAndReportSession()
             do {
@@ -143,17 +176,21 @@ public class PushPlatform {
                         switch result {
                         case .success(let id):
                             self.installationManager.completeRegistration(id)
+                            self.didStart = true
+                            if let token = self.pendingAPNsToken { self.apnsTokenManager?.didReceiveAPNsToken(token) }
+                            if let token = self.externalVoIPToken { self.registerExternalVoIPToken(token) }
+                            self.tokenRegistry.flushPendingRegistrations()
                             self.delegate?.didInitialize(installationID: id)
                         case .failure(let error):
                             self.delegate?.didFailRegisterTokens(error: error)
                         }
-                        completion?(result)
+                        self.finishInitialization(result)
                     }
                 }
             } catch {
                 let sdkError = error as? SDKError ?? .keychainAccessDenied
                 self.delegate?.didFailRegisterTokens(error: sdkError)
-                completion?(.failure(sdkError))
+                self.finishInitialization(.failure(sdkError))
             }
     }
 
@@ -171,6 +208,49 @@ public class PushPlatform {
                 if case .success(let id) = result { self.installationManager.completeRegistration(id) }
             }
         }
+    }
+
+    private func finishInitialization(_ result: Result<UUID, SDKError>) {
+        initializationInProgress = false
+        let callbacks = initializationCallbacks
+        initializationCallbacks.removeAll()
+        callbacks.forEach { $0(result) }
+    }
+
+    private func retryInitialization() {
+        guard !didStart, !initializationInProgress, let options = lastOptions else { return }
+        initialize(options)
+    }
+
+    /// Register the token from the application's existing PKPushRegistry.
+    /// This does not create a registry or a CallKit provider.
+    public func registerVoIPToken(_ token: Data) {
+        DispatchQueue.main.async {
+            self.externalVoIPToken = token
+            self.registerExternalVoIPToken(token)
+        }
+    }
+
+    private func registerExternalVoIPToken(_ token: Data) {
+        tokenRegistry.registerToken(token, provider: "apns_voip", environment: configuration.reportedEnvironment ?? "")
+    }
+
+    /// Opt-in PushKit transport. Install during native application launch.
+    /// The handler must report to the application's CallKit provider immediately,
+    /// then invoke completion; it must never wait for JavaScript or Dart.
+    public func startVoIPNotifications(handler: @escaping ([AnyHashable: Any], @escaping () -> Void) -> Void) {
+        precondition(Thread.isMainThread, "Start PushKit on the main thread during application launch")
+        guard pushKitManager == nil else { return }
+        pushKitManager = PushKitManager(tokenRegistry: tokenRegistry) { [weak self] payload, completion in
+            self?.handleVoIPNotification(payload)
+            handler(payload) {
+                if let id = payload["call_id"] as? String, let name = payload["caller_name"] as? String {
+                    self?.delegate?.didReceiveIncomingCall(callID: id, callerName: name, metadata: payload as? [String: Any] ?? [:])
+                }
+                completion()
+            }
+        }
+        pushKitManager?.delegate = self
     }
 
     // MARK: - Installation ID
@@ -228,11 +308,7 @@ public class PushPlatform {
     /// Register APNs token (call from AppDelegate didRegisterForRemoteNotifications)
     /// - Parameter token: Device token data
     public func didRegisterAPNsToken(_ token: Data) {
-        guard configuration.isConfigured else {
-            Logger.error("SDK not configured, cannot register APNs token")
-            return
-        }
-
+        pendingAPNsToken = token
         Logger.info("APNs token received: \(Logger.tokenMasked(token))")
         deviceToken = token.map { String(format: "%02x", $0) }.joined()
         if let deviceToken {
@@ -254,6 +330,27 @@ public class PushPlatform {
     }
 
     // MARK: - Notification Handling
+
+    /// A host-owned PushKit registry forwards its payload here for a device receipt.
+    /// CallKit reporting and PushKit completion remain the native application's responsibility.
+    @discardableResult
+    public func handleVoIPNotification(_ userInfo: [AnyHashable: Any]) -> Bool {
+        guard let id = userInfo[NotificationParser.notificationIDKey] as? String else { return false }
+        if Thread.isMainThread { voipReceivedReporter.report(id) }
+        else { DispatchQueue.main.async { self.voipReceivedReporter.report(id) } }
+        return true
+    }
+
+    /// Forward a delivered APNs payload from the application's background fetch callback.
+    /// Returns false for notifications belonging to another provider. This does not start
+    /// a JavaScript/Dart background runtime or replace the application's fetch completion.
+    @discardableResult
+    public func handleBackgroundNotification(_ userInfo: [AnyHashable: Any]) -> Bool {
+        guard userInfo[NotificationParser.notificationIDKey] is String else { return false }
+        if Thread.isMainThread { notificationDelegate?.handleBackground(userInfo) }
+        else { DispatchQueue.main.async { self.notificationDelegate?.handleBackground(userInfo) } }
+        return true
+    }
 
     /// Handle foreground notification (call from willPresent)
     /// - Parameters:
@@ -319,6 +416,7 @@ public class PushPlatform {
 
 extension PushPlatform: APNsTokenManagerDelegate {
     func didRegisterAPNsToken() {
+        delegate?.didRegisterTokens()
         delegate?.didUpdateAPNsToken()
     }
 
@@ -488,3 +586,13 @@ public final class NotificationDisplayEvent {
 
 /// Push notification data (public alias for ParsedNotification)
 public typealias Notification = ParsedNotification
+
+// External PushKit registries still receive independent registration results.
+extension PushPlatform: TokenRegistryDelegate {
+    func didRegisterToken(provider: String) {
+        if provider == "apns_voip" { delegate?.didUpdateVoIPToken() }
+    }
+    func didFailToRegisterToken(provider: String, error: SDKError) {
+        delegate?.didFailRegisterTokens(error: error)
+    }
+}

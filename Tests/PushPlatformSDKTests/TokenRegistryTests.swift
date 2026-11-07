@@ -204,27 +204,15 @@ final class TokenRegistryTests: XCTestCase {
         waitForExpectations(timeout: 1.0)
     }
 
-    func testRegisterToken_WithoutInstallationID() {
-        // Given
+    func testRegisterToken_WithoutInstallationIDWaitsForRegistration() {
         mockInstallationManager.installationID = nil
-        let token = Data([0xa1, 0xb2, 0xc3, 0xd4])
-
-        let expectation = self.expectation(description: "Fails without installation ID")
-        mockDelegate.onFailToRegisterToken = { provider, error in
-            if case .notConfigured = error {
-                XCTAssertTrue(true)
-            } else {
-                XCTFail("Should return notConfigured")
-            }
-            expectation.fulfill()
-        }
-
-        // When
-        tokenRegistry.registerToken(token, provider: "apns", environment: "development")
-
-        // Then
-        waitForExpectations(timeout: 1.0)
+        tokenRegistry.registerToken(Data([1]), provider: "apns", environment: "development")
+        XCTAssertFalse(mockAPIClient.createSubscriptionCalled)
+        mockInstallationManager.installationID = UUID()
+        tokenRegistry.flushPendingRegistrations()
+        XCTAssertTrue(mockAPIClient.createSubscriptionCalled)
     }
+
 }
 
 // MARK: - Mock API Client
