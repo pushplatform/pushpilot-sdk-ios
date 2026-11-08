@@ -72,6 +72,6 @@ VoIP подключается отдельно. Повторная инициа�
 ## Ошибки
 
 Completion возвращает SDKError: notConfigured, networkError, apiError, invalidToken,
-maxRetriesExceeded или keychainAccessDenied. HTTP status/message доступны в apiError.
+maxRetriesExceeded или keychainAccessDenied. Случай invalidAPIKey сохранён для совместимости; ключ отправки не является параметром initialize. HTTP status/message доступны в apiError.
 Ошибка регистрации не означает готовую подписку. Секреты серверной отправки не
 используются для device registration.
