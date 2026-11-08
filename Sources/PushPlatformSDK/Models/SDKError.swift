@@ -15,7 +15,7 @@ extension SDKError: LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .notConfigured:
-            return "SDK not configured. Call PushPlatform.shared.configure() first."
+            return "SDK not configured. Call PushPlatform.shared.initialize() first."
         case .invalidAPIKey:
             return "Invalid API key provided."
         case .networkError(let underlying):

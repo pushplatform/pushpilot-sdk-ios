@@ -14,13 +14,13 @@ Swift Package Manager (SPM) — основной способ установки
 https://github.com/pushplatform/pushpilot-sdk-ios.git
 ```
 
-Выберите версию **1.2.10** или правило **Up to Next Major Version** от `1.2.10`. Добавьте продукт **PushPlatformSDK** в target приложения. Для Notification Service Extension добавьте продукт **PushPlatformExtension**, не полный SDK.
+Выберите версию **2.0.1** или правило **Up to Next Major Version** от `2.0.1`. Добавьте продукт **PushPlatformSDK** в target приложения. Для Notification Service Extension добавьте продукт **PushPlatformExtension**, не полный SDK.
 
 Для приложения с `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/pushplatform/pushpilot-sdk-ios.git", from: "1.2.10")
+    .package(url: "https://github.com/pushplatform/pushpilot-sdk-ios.git", from: "2.0.1")
 ]
 // В dependencies вашего target:
 // .product(name: "PushPlatformSDK", package: "pushpilot-sdk-ios")
@@ -31,24 +31,16 @@ dependencies: [
 
 ## CocoaPods
 
-`PushPlatformSDK` **1.2.10** ставится через Swift Package Manager. Для CocoaPods используйте ту же версию, когда она есть в Trunk (или git-тег `v1.2.10`):
+Подключите SDK и extension с одним git-тегом:
 
 ```ruby
 platform :ios, '13.0'
 target 'MyApp' do
   use_frameworks!
-  # While Trunk omits 1.2.10, pin both pods from the same git tag:
-  # pod 'PushPlatformExtension', :git => 'https://github.com/pushplatform/pushpilot-sdk-ios.git', :tag => 'v1.2.10'
-  # pod 'PushPlatformSDK', :git => 'https://github.com/pushplatform/pushpilot-sdk-ios.git', :tag => 'v1.2.10'
-  pod 'PushPlatformSDK', '1.2.10'
+  pod 'PushPlatformExtension', :git => 'https://github.com/pushplatform/pushpilot-sdk-ios.git', :tag => 'v2.0.1'
+  pod 'PushPlatformSDK', :git => 'https://github.com/pushplatform/pushpilot-sdk-ios.git', :tag => 'v2.0.1'
 end
 ```
-
-Выполните `pod install --repo-update` и откройте `.xcworkspace`. При использовании React Native добавлять эту строку вручную не требуется: RN bridge объявляет зависимость, CocoaPods устанавливает её через autolinking. Expo plugin по-прежнему может использовать закреплённые исходники из npm-пакета.
-
-Для одного target выбирайте один способ подключения SDK. При переходе на SPM удалите зависимость SDK из Podfile и выполните `pod install`, затем добавьте SPM package по инструкции выше. Продукт и импорт остаются `PushPlatformSDK`.
-
-Порядок выпуска новых версий: [docs/RELEASING.md](docs/RELEASING.md).
 
 ## Подтверждение доставки при закрытом приложении
 
@@ -61,11 +53,11 @@ iOS показывает баннер и не запускает приложе�
 
 ```ruby
 # App target (and RN Podfile root while Trunk omits the version):
-pod 'PushPlatformExtension', :git => 'https://github.com/pushplatform/pushpilot-sdk-ios.git', :tag => 'v1.2.10'
-pod 'PushPlatformSDK', :git => 'https://github.com/pushplatform/pushpilot-sdk-ios.git', :tag => 'v1.2.10'
+pod 'PushPlatformExtension', :git => 'https://github.com/pushplatform/pushpilot-sdk-ios.git', :tag => 'v2.0.1'
+pod 'PushPlatformSDK', :git => 'https://github.com/pushplatform/pushpilot-sdk-ios.git', :tag => 'v2.0.1'
 
 target 'PushPlatformNotificationServiceExtension' do
-  pod 'PushPlatformExtension', :git => 'https://github.com/pushplatform/pushpilot-sdk-ios.git', :tag => 'v1.2.10'
+  pod 'PushPlatformExtension', :git => 'https://github.com/pushplatform/pushpilot-sdk-ios.git', :tag => 'v2.0.1'
 end
 ```
 
@@ -73,7 +65,7 @@ end
 
 ```ruby
 target 'PushPlatformNotificationServiceExtension' do
-  pod 'PushPlatformExtension', '1.2.10'
+  pod 'PushPlatformExtension', '2.0.1'
 end
 ```
 
@@ -187,7 +179,7 @@ PushPlatform.shared.logout { result in
 2. На стороне сервера PushPilot настройте APNs authentication key (`.p8`, Key ID, Team ID) либо поддерживаемый сервером сертификат. Эти данные остаются на сервере.
 3. Согласуйте Bundle ID, APNs topic и окружение: `.development` для sandbox, `.production` для production. SDK не меняет signing и entitlements; `aps-environment` определяется профилем подписи, а не `Info.plist`.
 4. Для silent push добавьте **Background Modes → Remote notifications** и обработчик `application(_:didReceiveRemoteNotification:fetchCompletionHandler:)` в приложении. SDK не предоставляет отдельного публичного обработчика фонового обновления.
-5. Для реальных VoIP-звонков добавьте **Background Modes → Voice over IP**, настройте серверный VoIP topic и отправляйте `call_id` в формате UUID и `caller_name`. SDK создаёт PushKit registry и CallKit provider автоматически; публичного переключателя отключения VoIP сейчас нет.
+5. Для реальных VoIP-звонков добавьте **Background Modes → Voice over IP**, настройте серверный VoIP topic и отправляйте `call_id` в формате UUID и `caller_name`. Приложение владеет CallKit provider. Передавайте VoIP-токен в `registerVoIPToken` из своего PushKit registry либо вызовите `startVoIPNotifications(handler:)` с нативным обработчиком, который сообщает входящий в CallKit. Обычная инициализация SDK не включает VoIP.
 
 Подробности платформы: [регистрация APNs](https://developer.apple.com/documentation/usernotifications/registering-your-app-with-apns) и [ключи APNs](https://developer.apple.com/help/account/capabilities/communicate-with-apns-using-authentication-tokens/).
 
@@ -195,8 +187,8 @@ PushPlatform.shared.logout { result in
 
 - Регистрация installation, APNs/VoIP-токенов и привязка внешнего пользователя через `login`/`logout`.
 - Обработка уведомлений в foreground и нажатий через переданные системные callbacks. Дедупликация по `event_id` работает в памяти текущего процесса; SDK не может отменить уже показанное системой фоновое уведомление.
-- Повторные попытки регистрации токенов и login/logout при сетевых ошибках, HTTP 429 и 5xx. Очередь операций не сохраняется между запусками; автоматического retry первоначального `configure` нет.
-- CallKit сообщает о входящем звонке, но SDK не реализует аудиотранспорт и публичные callbacks для управления разговором. Интеграцию звонков необходимо отдельно оценить для своего приложения и требований Apple.
+- Повторные попытки регистрации токенов и login/logout при сетевых ошибках, HTTP 429 и 5xx. При недоступности сети SDK повторяет инициализацию и регистрацию после восстановления соединения.
+- Нативный VoIP handler передаёт входящий вызов приложению; приложение управляет CallKit, ответом, завершением и аудиотранспортом.
 - Разрешения, категории действий, переходы внутри приложения, rich media и обработка silent push настраиваются приложением. Доставка и фоновые запуски зависят от APNs и iOS.
 - SDK не содержит сертификатов или подписанного бинарного framework: установка из исходников не требует signing самого пакета. Реальный APNs требует корректно подписанного приложения и серверной конфигурации; проверяйте доставку отдельно на устройстве.
 - `debugMode: true` предназначен для разработки: логи могут содержать идентификаторы пользователя и installation. Используйте HTTPS URL своего API; значение URL по умолчанию является заполнителем.
@@ -204,11 +196,11 @@ PushPlatform.shared.logout { result in
 [Исходники примера](Example/), [история изменений](CHANGELOG.md), [Issues](https://github.com/pushplatform/pushpilot-sdk-ios/issues). Лицензия — [MIT](LICENSE).
 
 
-### Текущий контракт (1.2.1)
+### Текущий контракт (2.0.1)
 
-`initialize` принимает application id или options с `url` и `environment`. Custom `url` не означает development: storage всегда production, sandbox APNs — из профиля. Секретный ключ для регистрации не нужен. `login(userID:metadata:)` записывает metadata в теги пользователя. `getDeviceToken()` возвращает последний hex APNs-токен или `nil`, пока система его не выдала. `preventDefault()` на показе в foreground скрывает баннер, звук и бейдж, если вызван до возврата делегата. При тапе SDK сам отправляет `PUT /notifications/{id}`, даже если приложение было закрыто; до `initialize` открытие ждёт в очереди. `notification.notificationID` — id из ответа `POST /notifications`, он не попадает в `customData`. `getSubscriptionID()` возвращает id подписки APNs после регистрации токена. Ставьте 1.2.10.
+`initialize` принимает application id или options с `url` и `environment`. Custom `url` не означает development: storage всегда production, sandbox APNs — из профиля. Секретный ключ для регистрации не нужен. `login(userID:metadata:)` записывает metadata в теги пользователя. `getDeviceToken()` возвращает последний hex APNs-токен или `nil`, пока система его не выдала. `preventDefault()` на показе в foreground скрывает баннер, звук и бейдж, если вызван до возврата делегата. При тапе SDK сам отправляет `PUT /notifications/{id}`, даже если приложение было закрыто; до `initialize` открытие ждёт в очереди. `notification.notificationID` — id из ответа `POST /notifications`, он не попадает в `customData`. `getSubscriptionID()` возвращает id подписки APNs после регистрации токена.
 
-### Unified application contract (1.1.0)
+### Unified application contract
 
 Use one application ID and its permanent application key on every platform and your server.
 The key is extractable from the client and permits device registration and message sending **only for that application**. It cannot manage the organization or billing. Rotate/revoke it in the console.
