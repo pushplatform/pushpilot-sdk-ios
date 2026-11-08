@@ -23,7 +23,7 @@ fetch callback. SDK также подключает автоматический
 В приложении должен быть ровно один владелец звонка и системного интерфейса.
 Если приложение уже использует PushKit + CallKeep/CallKit:
 
-1. Инициализируйте PushPilot нативно при запуске, с теми же app ID и URL, что в JS/Dart.
+1. Инициализируйте PushPilot нативно при запуске, с тем же UUID приложения, что в JS/Dart.
 2. В существующем PushKit token callback вызовите
    `PushPlatform.shared.registerVoIPToken(credentials.token)`.
 3. Передайте payload в `PushPlatform.shared.handleVoIPNotification(payload.dictionaryPayload)` для receipt.
@@ -59,20 +59,23 @@ Android permissions и системного calling API приложения.
 
 ## Установка
 
-Мобильные SDK и обёртки используют версию 2.0.1.
-
-- React Native: `npm install @pushplatform/react-native@2.0.1`.
-- Flutter: `flutter pub add push_platform_flutter:^2.0.1`.
-- Android: `implementation("com.pushplatform:sdk-android:2.0.1")`.
-- iOS: Swift Package Manager с версией 2.0.1 или CocoaPods с git-тегом `v2.0.1`.
-
-React Native подключает нативные SDK из своего npm-пакета. Flutter подключает
-Android SDK из публичного Maven-репозитория и iOS SDK через CocoaPods.
-В Podfile Flutter-проекта подключите оба pod с одним тегом:
+- React Native: `npm install @pushplatform/react-native`.
+- Flutter: `flutter pub add push_platform_flutter`.
+- Android: `implementation("com.pushplatform:sdk-android:[2.0.0,3.0)")`.
+- iOS: Swift Package Manager с совместимым диапазоном 2.x или CocoaPods:
 
 ```ruby
-pod 'PushPlatformExtension', :git => 'https://github.com/pushplatform/pushpilot-sdk-ios.git', :tag => 'v2.0.1'
-pod 'PushPlatformSDK', :git => 'https://github.com/pushplatform/pushpilot-sdk-ios.git', :tag => 'v2.0.1'
+pod 'PushPlatformSDK', '>= 2.0.0', '< 3.0'
+```
+
+React Native и Flutter подключают SDK основного приложения транзитивно.
+Отдельные записи native SDK в основном target Podfile не нужны.
+Для подтверждений доставки при закрытом iOS-приложении добавьте отдельный NSE target:
+
+```ruby
+target 'PushPlatformNotificationServiceExtension' do
+	pod 'PushPlatformExtension', '>= 2.0.0', '< 3.0'
+end
 ```
 
 Проверяйте alert, открытие, badge, входящий звонок, answer, двустороннее аудио,

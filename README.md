@@ -4,6 +4,20 @@
 
 Требования: iOS 13+, Swift 5.5+; для примера на SwiftUI — Swift 5.7+. Сборка приложения требует Xcode с iOS SDK. macOS, watchOS и tvOS не поддерживаются.
 
+## Формы инициализации
+
+Выполните один из вариантов один раз при запуске приложения.
+`debugMode: true` включает диагностику; для обычной работы используйте `false`.
+
+```swift
+PushPlatform.shared.initialize(.init(
+    applicationId: "YOUR_APPLICATION_UUID",
+    debugMode: true
+))
+
+PushPlatform.shared.initialize("YOUR_APPLICATION_UUID")
+```
+
 ## Установка через Swift Package Manager (рекомендуется)
 
 Swift Package Manager (SPM) — основной способ установки SDK и получения новых версий. Новые версии выпускаются через Git-теги и GitHub Releases в этом репозитории; их доступность в SPM не зависит от публикации в CocoaPods Trunk.
@@ -14,13 +28,13 @@ Swift Package Manager (SPM) — основной способ установки
 https://github.com/pushplatform/pushpilot-sdk-ios.git
 ```
 
-Выберите версию **2.0.1** или правило **Up to Next Major Version** от `2.0.1`. Добавьте продукт **PushPlatformSDK** в target приложения. Для Notification Service Extension добавьте продукт **PushPlatformExtension**, не полный SDK.
+Выберите правило **Up to Next Major Version** от `2.0.0`. Добавьте продукт **PushPlatformSDK** в target приложения. Для Notification Service Extension добавьте продукт **PushPlatformExtension**, не полный SDK.
 
 Для приложения с `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/pushplatform/pushpilot-sdk-ios.git", from: "2.0.1")
+    .package(url: "https://github.com/pushplatform/pushpilot-sdk-ios.git", from: "2.0.0")
 ]
 // В dependencies вашего target:
 // .product(name: "PushPlatformSDK", package: "pushpilot-sdk-ios")
@@ -31,14 +45,13 @@ dependencies: [
 
 ## CocoaPods
 
-Подключите SDK и extension с одним git-тегом:
+Подключите SDK в target основного приложения:
 
 ```ruby
 platform :ios, '13.0'
 target 'MyApp' do
   use_frameworks!
-  pod 'PushPlatformExtension', :git => 'https://github.com/pushplatform/pushpilot-sdk-ios.git', :tag => 'v2.0.1'
-  pod 'PushPlatformSDK', :git => 'https://github.com/pushplatform/pushpilot-sdk-ios.git', :tag => 'v2.0.1'
+  pod 'PushPlatformSDK', '>= 2.0.0', '< 3.0'
 end
 ```
 
@@ -49,23 +62,11 @@ iOS показывает баннер и не запускает приложе�
 1. В Xcode выберите **File → New → Target → Notification Service Extension**. На вопрос Activate scheme нажмите **Don't Activate**. Deployment Target совпадает с приложением и не ниже iOS 13.
 2. Bundle ID extension — bundle ID приложения плюс `.PushPlatformNotificationService`. Для `com.example.app` это `com.example.app.PushPlatformNotificationService`.
 3. На target приложения и на target extension включите capability **App Groups** и одну группу `group.<bundle id приложения>.pushplatform`. Для примера выше это `group.com.example.app.pushplatform`. В имени группы нет суффикса extension.
-4. В Podfile для приложения pin’ьте оба пода с одного git-тега (пока Trunk не отдаёт версию). В target extension — **только** `PushPlatformExtension`, не `PushPlatformSDK`. Образец: [Sources/PushPlatformNotificationService/NotificationService.swift](Sources/PushPlatformNotificationService/NotificationService.swift).
-
-```ruby
-# App target (and RN Podfile root while Trunk omits the version):
-pod 'PushPlatformExtension', :git => 'https://github.com/pushplatform/pushpilot-sdk-ios.git', :tag => 'v2.0.1'
-pod 'PushPlatformSDK', :git => 'https://github.com/pushplatform/pushpilot-sdk-ios.git', :tag => 'v2.0.1'
-
-target 'PushPlatformNotificationServiceExtension' do
-  pod 'PushPlatformExtension', :git => 'https://github.com/pushplatform/pushpilot-sdk-ios.git', :tag => 'v2.0.1'
-end
-```
-
-С Trunk:
+4. Подключите отдельный target extension с PushPlatformExtension. Основному приложению нужен PushPlatformSDK; он уже подключён в разделе CocoaPods выше.
 
 ```ruby
 target 'PushPlatformNotificationServiceExtension' do
-  pod 'PushPlatformExtension', '2.0.1'
+	pod 'PushPlatformExtension', '>= 2.0.0', '< 3.0'
 end
 ```
 
@@ -100,7 +101,7 @@ class NotificationService: UNNotificationServiceExtension {
 
 В extension — только `import PushPlatformExtension`. `import PushPlatformSDK` даёт `No such module 'PushPlatformSDK'`, потому что полный SDK в NSE не линкуется. Extension не меняет заголовок, текст и картинку. React Native, Expo и Flutter этот target не создают. Его добавляет владелец приложения тем же способом.
 
-Получите UUID приложения PushPilot. Регистрация устройства секретный ключ не отправляет. Если нужен свой сервер, передайте его в `InitializeOptions.url`; без адреса SDK использует https://api.pushpilot.ru. Не встраивайте административные ключи и секреты APNs. Замените UUID в примере на свой.
+Получите UUID приложения PushPilot. Регистрация устройства секретный ключ не отправляет.
 
 ```swift
 import UIKit
@@ -116,7 +117,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
         let center = UNUserNotificationCenter.current()
         center.delegate = self
 
-        PushPlatform.shared.initialize("11111111-1111-1111-1111-111111111111") { result in
+        PushPlatform.shared.initialize("YOUR_APPLICATION_UUID") { result in
             switch result {
             case .success:
                 center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
@@ -158,7 +159,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
 
 В существующем UIKit-приложении добавьте методы в свой `AppDelegate`, оставив его настройку UI. В SwiftUI подключите этот delegate через `@UIApplicationDelegateAdaptor(AppDelegate.self)` и уберите `@main` у `AppDelegate`.
 
-`configure` регистрирует installation асинхронно. Перед регистрацией APNs-токена, `login` и `logout` дождитесь `.success`. Вместо аргумента `applicationID` можно указать строку UUID в `Info.plist` под ключом `PushPlatformApplicationID`. UUID устройства сохраняется в Keychain; `getInstallationID()` возвращает ID, выданный сервером после успешной регистрации.
+`initialize` регистрирует installation асинхронно. Перед регистрацией APNs-токена, `login` и `logout` дождитесь `.success`. Передайте UUID приложения в `applicationId` или используйте короткую строковую форму. UUID устройства сохраняется в Keychain; `getInstallationID()` возвращает ID, выданный сервером после успешной регистрации.
 
 После успешной настройки:
 
@@ -191,19 +192,18 @@ PushPlatform.shared.logout { result in
 - Нативный VoIP handler передаёт входящий вызов приложению; приложение управляет CallKit, ответом, завершением и аудиотранспортом.
 - Разрешения, категории действий, переходы внутри приложения, rich media и обработка silent push настраиваются приложением. Доставка и фоновые запуски зависят от APNs и iOS.
 - SDK не содержит сертификатов или подписанного бинарного framework: установка из исходников не требует signing самого пакета. Реальный APNs требует корректно подписанного приложения и серверной конфигурации; проверяйте доставку отдельно на устройстве.
-- `debugMode: true` предназначен для разработки: логи могут содержать идентификаторы пользователя и installation. Используйте HTTPS URL своего API; значение URL по умолчанию является заполнителем.
+- `debugMode: true` предназначен для разработки: логи могут содержать идентификаторы пользователя и installation.
 
 [Исходники примера](Example/), [история изменений](CHANGELOG.md), [Issues](https://github.com/pushplatform/pushpilot-sdk-ios/issues). Лицензия — [MIT](LICENSE).
 
 
 ### Текущий контракт (2.0.1)
 
-`initialize` принимает application id или options с `url` и `environment`. Custom `url` не означает development: storage всегда production, sandbox APNs — из профиля. Секретный ключ для регистрации не нужен. `login(userID:metadata:)` записывает metadata в теги пользователя. `getDeviceToken()` возвращает последний hex APNs-токен или `nil`, пока система его не выдала. `preventDefault()` на показе в foreground скрывает баннер, звук и бейдж, если вызван до возврата делегата. При тапе SDK сам отправляет `PUT /notifications/{id}`, даже если приложение было закрыто; до `initialize` открытие ждёт в очереди. `notification.notificationID` — id из ответа `POST /notifications`, он не попадает в `customData`. `getSubscriptionID()` возвращает id подписки APNs после регистрации токена.
+`initialize` принимает UUID приложения либо options с applicationId и debugMode. Sandbox APNs определяется профилем подписания. Секретный ключ для регистрации не нужен. `login(userID:metadata:)` записывает metadata в теги пользователя. `getDeviceToken()` возвращает последний hex APNs-токен или `nil`, пока система его не выдала. `preventDefault()` на показе в foreground скрывает баннер, звук и бейдж, если вызван до возврата делегата. При тапе SDK сам отправляет `PUT /notifications/{id}`, даже если приложение было закрыто; до `initialize` открытие ждёт в очереди. `notification.notificationID` — id из ответа `POST /notifications`, он не попадает в `customData`. `getSubscriptionID()` возвращает id подписки APNs после регистрации токена.
 
 ### Unified application contract
 
-Use one application ID and its permanent application key on every platform and your server.
-The key is extractable from the client and permits device registration and message sending **only for that application**. It cannot manage the organization or billing. Rotate/revoke it in the console.
+Use the same application ID in SDKs on every platform. Device registration does not require a secret key. Keep the permanent application key in server code for sending notifications; rotate or revoke it in the console.
 No project or environment selection is required. Existing explicit environment arguments remain supported for compatibility.
 The SDK reports actual model, OS/SDK/app versions, language, time zone, notification permission and device kind. Unknown values remain unknown; emulator/simulator detection is not device attestation. A test subscription is a separate console flag.
 Metadata refreshes on foreground entry and after a permission change.
