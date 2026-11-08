@@ -7,7 +7,6 @@
 ```swift
 PushPlatform.shared.initialize(.init(
     applicationId: "YOUR_APPLICATION_UUID",
-    url: "https://api.pushpilot.ru",
     debugMode: false
 )) { result in
     // Result<UUID, SDKError>
@@ -15,8 +14,8 @@ PushPlatform.shared.initialize(.init(
 ```
 
 Также поддерживается `initialize(applicationId, completion:)`. `InitializeOptions`
-содержит applicationId, необязательные url/environment, debugMode и
-foregroundBannerFallback. Без url используется https://api.pushpilot.ru.
+содержит applicationId, debugMode и
+foregroundBannerFallback. Используется стандартный сервер PushPilot.
 Ключ отправки в клиентском коде не требуется. Обычная инициализация включает APNs;
 VoIP подключается отдельно. Повторная инициализация с той же конфигурацией ожидает
 общий результат; изменение конфигурации в работающем процессе отклоняется.
