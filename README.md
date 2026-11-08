@@ -197,7 +197,7 @@ PushPlatform.shared.logout { result in
 [Исходники примера](Example/), [история изменений](CHANGELOG.md), [Issues](https://github.com/pushplatform/pushpilot-sdk-ios/issues). Лицензия — [MIT](LICENSE).
 
 
-### Текущий контракт (2.0.2)
+### Текущий контракт (2.0.3)
 
 `initialize` принимает UUID приложения либо options с applicationId и debugMode. Sandbox APNs определяется профилем подписания. Секретный ключ для регистрации не нужен. `login(userID:metadata:)` записывает metadata в теги пользователя. `getDeviceToken()` возвращает последний hex APNs-токен или `nil`, пока система его не выдала. `preventDefault()` на показе в foreground скрывает баннер, звук и бейдж, если вызван до возврата делегата. При тапе SDK сам отправляет `PUT /notifications/{id}`, даже если приложение было закрыто; до `initialize` открытие ждёт в очереди. `notification.notificationID` — id из ответа `POST /notifications`, он не попадает в `customData`. `getSubscriptionID()` возвращает id подписки APNs после регистрации токена.
 
