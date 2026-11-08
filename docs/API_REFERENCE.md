@@ -1,4 +1,4 @@
-# iOS API — 2.0.2
+# iOS API — 2.0.3
 
 Публичный фасад — `PushPlatform.shared` из модуля `PushPlatformSDK`.
 
