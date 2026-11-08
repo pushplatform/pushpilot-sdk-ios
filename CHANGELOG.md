@@ -1,3 +1,9 @@
+# 2.0.2 — 2026-11-08
+
+- Примеры initialize показывают UUID и options с applicationId/debugMode без адреса сервера.
+- Обновлены CocoaPods/SPM-инструкции и отдельный target для PushPlatformExtension; удалены устаревшие обходные инструкции.
+- Версии SDK, Extension, runtime metadata и соответствующей проверки согласованы с 2.0.2.
+
 # 1.2.11 — 2026-11-05
 
 ## 2.0.1
