@@ -3,15 +3,14 @@
 ## Установка
 
 В Xcode добавьте Swift Package Manager package:
-`https://github.com/pushplatform/pushpilot-sdk-ios.git`, версия 2.0.1.
+`https://github.com/pushplatform/pushpilot-sdk-ios.git`, совместимый диапазон 2.x.
 Приложению нужен продукт `PushPlatformSDK`; Notification Service Extension —
 отдельный продукт `PushPlatformExtension` той же версии.
 
-Для CocoaPods подключите оба pod из одного тега:
+Для приложения через CocoaPods подключите SDK совместимой ветки 2.x:
 
 ```ruby
-pod 'PushPlatformExtension', :git => 'https://github.com/pushplatform/pushpilot-sdk-ios.git', :tag => 'v2.0.1'
-pod 'PushPlatformSDK', :git => 'https://github.com/pushplatform/pushpilot-sdk-ios.git', :tag => 'v2.0.1'
+pod 'PushPlatformSDK', '>= 2.0.0', '< 3.0'
 ```
 
 ## Регистрация
@@ -26,7 +25,7 @@ import UserNotifications
 
 PushPlatform.shared.initialize(.init(
     applicationId: "YOUR_APPLICATION_UUID",
-    url: "https://api.pushpilot.ru"
+    debugMode: false
 )) { result in
     switch result {
     case .success:
@@ -64,10 +63,16 @@ PushPlatform.shared.logout { result in
 
 ## Подтверждение доставки при закрытом приложении
 
-Добавьте Notification Service Extension, подключите `PushPlatformExtension` 2.0.1
+Добавьте Notification Service Extension и подключите его отдельный pod
 и настройте одну App Group `group.<app bundle ID>.pushplatform` в обоих targets и
 provisioning profiles. В NotificationService.swift используйте
 `import PushPlatformExtension`. Полный пример приведён в [README](../README.md).
+
+```ruby
+target 'PushPlatformNotificationServiceExtension' do
+	pod 'PushPlatformExtension', '>= 2.0.0', '< 3.0'
+end
+```
 
 ## Входящие звонки
 

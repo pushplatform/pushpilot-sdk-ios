@@ -2,13 +2,12 @@
 
 ## Установка и версии
 
-PushPlatformSDK и PushPlatformExtension должны использовать 2.0.1 из одного
-SPM package/git-тега. Для extension импортируйте PushPlatformExtension; для
+Используйте совместимые продукты PushPlatformSDK и PushPlatformExtension ветки 2.x. Для extension импортируйте PushPlatformExtension; для
 приложения — PushPlatformSDK. Сверьте версии в Package.resolved или Podfile.lock.
 
 ## Регистрация
 
-Передавайте UUID приложения и API URL в initialize. Ключ серверной отправки для
+Передавайте UUID приложения PushPilot в initialize. Ключ серверной отправки для
 регистрации не требуется. Проверьте результат initialize и didFailRegisterTokens:
 получение APNs-токена ещё не означает принятую сервером подписку. При потере сети
 SDK повторяет регистрацию. Не меняйте applicationId/URL в существующем процессе.

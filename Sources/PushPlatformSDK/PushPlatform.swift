@@ -111,7 +111,7 @@ public class PushPlatform {
         initialize(InitializeOptions(applicationId: applicationId), completion: completion)
     }
 
-    /// Initialize with an application id and an optional server URL and environment.
+    /// Initialize with an application UUID and options such as debugMode.
     /// Storage is always production unless an explicit legacy `environment` is passed.
     /// APNs/VoIP sandbox comes from the provisioning profile (`Environment.automatic`), not from `url`.
     public func initialize(_ options: InitializeOptions, completion: ((Result<UUID, SDKError>) -> Void)? = nil) {
